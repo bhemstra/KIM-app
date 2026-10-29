@@ -1,8 +1,12 @@
-# KIM-1 emulator
+# KIM-1 en Junior Computer emulator
 
-Een emulator van de **MOS KIM-1** (1976), de eenbordscomputer waarmee MOS Technology
-de 6502-processor introduceerde. Alles draait in de browser: geen installatie, geen
-build-stap, geen afhankelijkheden.
+Twee emulators van 6502-eenbordscomputers, die in de browser draaien zonder
+installatie, build-stap of afhankelijkheden:
+
+- **MOS KIM-1** (1976), de computer waarmee MOS Technology de 6502 introduceerde
+  (`index.html`);
+- **Elektor/Elektuur Junior Computer** (1980), het bouwproject dat sterk op de
+  KIM-1 lijkt (`junior.html`).
 
 ![KIM-1: zes LED-cijfers, een hexadecimaal keypad en de SST-schakelaar](docs/screenshot.png)
 
@@ -38,6 +42,19 @@ python3 -m http.server 8000
 - **Bestanden & cassette**: laden/opslaan als KIM-papertape (`.ptp`), Intel HEX of
   binair; `DUMPT`/`LOADT` (`1800 GO` / `1873 GO`) schrijven naar een virtuele cassette.
 
+## Junior Computer
+
+- **Hardware**: 1K RAM, een 6532 RIOT (128 bytes RAM op `$1A00`, I/O en timer op
+  `$1A80`, IRQ naar de 6502), 1K monitor-EPROM op `$1C00–$1FFF`, display met
+  actief-lage segmenten, keypad en STEP-schakelaar.
+- **Monitor**: nagebootst volgens de gepubliceerde listing van A. Nachtmann:
+  keypadmonitor, hex-editor (`1CB5 GO`), assembler (`1F51 GO`), sprongberekening
+  (`1FD5 GO`) en subroutines als `SCAND`, `SCANDS`, `AK`, `GETKEY`, `GETBYT` en
+  `SHOW`. Met een eigen dump van de EPROM (1 KB) draait de echte monitorcode.
+- De tests vergelijken de nagebootste monitor met de originele ROM-code
+  (`JUNIOR_ROM=/pad/naar/monitor.bin npm test`): monitor, editor, assembler,
+  sprongberekening en `SCANDS` gedragen zich identiek.
+
 ## Snel proberen
 
 1. Druk **AD**, tik `0200`, druk **DA** en tik `A9` **+** `42` **+** `00`.
@@ -63,8 +80,11 @@ KLAUS_BIN=/pad/naar/6502_functional_test.bin npm test
 | --- | --- |
 | `js/cpu6502.js` | 6502-kern |
 | `js/opcodes.js` | opcodetabel (gedeeld) |
-| `js/kim1.js` | KIM-1: geheugen, 6530's, display, keypad, monitor |
+| `js/board.js` | gemeenschappelijke basis: display, keypad, SST, uitvoering |
+| `js/riot.js` | 6530 en 6532 RIOT |
+| `js/kim1.js` | KIM-1: geheugen, 6530's, monitor |
+| `js/junior.js` | Junior Computer: geheugen, 6532, monitor, editor, assembler |
+| `js/app.js` | gebruikersinterface (gedeeld); `main.js` en `junior-main.js` starten hem |
 | `js/assembler.js`, `js/disasm.js` | assembler en disassembler |
 | `js/fileformats.js` | papertape en Intel HEX |
-| `js/samples.js` | voorbeeldprogramma's |
-| `js/main.js` | gebruikersinterface |
+| `js/samples.js`, `js/samples-junior.js` | voorbeeldprogramma's |

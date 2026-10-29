@@ -202,7 +202,7 @@ function runPass(lines, symbols, final) {
     const linePc = pc;
 
     // Constante: NAAM = expr of NAAM .EQU expr
-    let m = /^\s*([A-Za-z_][A-Za-z0-9_]*)\s*(=|\.EQU\b|EQU\b)\s*(.+)$/i.exec(line);
+    let m = /^\s*([A-Za-z_][A-Za-z0-9_]*):?\s*(=|\.EQU\b|EQU\b)\s*(.+)$/i.exec(line);
     if (m && m[1] !== '*') {
       const v = ev(m[3], lineNo);
       if (v !== undefined) symbols[m[1].toUpperCase()] = v & 0xFFFF;

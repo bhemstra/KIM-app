@@ -333,3 +333,34 @@ kbd {
 @media (pointer: coarse) {
   input.hex4, select, textarea#source { font-size: 16px; }
 }
+
+/* ---------- Keuze tussen de machines ---------- */
+.top { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 20px; }
+.top .sub { flex-basis: 100%; order: 3; }
+.machines { display: flex; gap: 6px; margin-left: auto; }
+.machines a {
+  color: var(--muted);
+  text-decoration: none;
+  font-size: 14px;
+  padding: 4px 10px;
+  border: 1px solid #3a414a;
+  border-radius: 999px;
+}
+.machines a:hover { color: var(--text); border-color: var(--accent); }
+.machines a[aria-current="page"] { color: #1a1a1a; background: var(--accent); border-color: var(--accent); }
+
+/* ---------- Junior Computer: blauwe print, display op een eigen printje ---------- */
+.board.junior {
+  --pcb: #1d4a73;
+  --pcb-dark: #143653;
+  background:
+    repeating-linear-gradient(0deg, transparent 0 46px, rgba(120, 170, 220, 0.18) 46px 48px),
+    radial-gradient(circle at 30% 20%, var(--pcb), var(--pcb-dark));
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5), inset 0 0 0 2px #0e2840;
+}
+.board.junior .keypad { background: #1c1c1c; }
+.board.junior .keypad button { background: linear-gradient(#5a5a5a, #3c3c3c); color: #f2f2f2; box-shadow: 0 4px 0 #1e1e1e, 0 5px 6px rgba(0, 0, 0, 0.5); }
+.board.junior .keypad button.fn { background: linear-gradient(#c8473d, #a5352d); color: #fff; }
+.board.junior .keypad button .kb { color: #bdbdbd; }
+.board.junior .keypad button.down,
+.board.junior .keypad button:active { box-shadow: 0 1px 0 #1e1e1e, 0 2px 3px rgba(0, 0, 0, 0.5); }

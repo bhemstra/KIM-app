@@ -1,0 +1,193 @@
+<!doctype html>
+<html lang="nl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Junior Computer Emulator</title>
+  <meta name="description" content="Emulator van de Junior Computer van Elektor/Elektuur (1980) met 6502-processor, LED-display, keypad, hex-editor, assembler en debugger.">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <header class="top">
+    <h1>Junior Computer <span>emulator</span></h1>
+    <p class="sub">Elektor / Elektuur, 1980 &middot; 6502 @ 1 MHz &middot; 1K RAM &middot; 6532 RIOT</p>
+    <nav class="machines" aria-label="Kies een computer">
+      <a href="index.html">KIM-1</a>
+      <a href="junior.html" aria-current="page">Junior Computer</a>
+    </nav>
+  </header>
+
+  <main class="layout">
+    <!-- Het bord -->
+    <section class="board junior" aria-label="Junior Computer"> 
+      <div class="silk">ELEKTOR &nbsp; JUNIOR COMPUTER</div>
+      <div class="display-wrap">
+        <svg id="display" class="display" viewBox="0 0 330 80" role="img" aria-label="LED-display"></svg>
+      </div>
+
+      <div class="keypad-area">
+        <div class="keypad" id="keypad"></div>
+        <div class="side">
+          <label class="sst" title="Stap voor stap: na elke instructie terug naar de monitor">
+            <span>STEP</span>
+            <input type="checkbox" id="sst">
+            <span class="slider" aria-hidden="true"></span>
+            <span class="sst-state" id="sst-state">UIT</span>
+          </label>
+          <div class="status" id="status">MONITOR</div>
+        </div>
+      </div>
+
+      <div class="chips" aria-hidden="true">
+        <div class="chip big">6502</div>
+        <div class="chip">6532</div>
+        <div class="chip">2708</div>
+      </div>
+    </section>
+
+    <!-- Panelen -->
+    <section class="panels">
+      <nav class="tabs" role="tablist">
+        <button role="tab" data-tab="asm" class="active">Assembler</button>
+        <button role="tab" data-tab="dbg">Debugger</button>
+        <button role="tab" data-tab="io">Bestanden</button>
+        <button role="tab" data-tab="set">Instellingen</button>
+        <button role="tab" data-tab="help">Uitleg</button>
+      </nav>
+
+      <div class="tab-body active" data-tab="asm">
+        <div class="row">
+          <select id="sample"></select>
+          <button id="btn-load-sample">Voorbeeld openen</button>
+        </div>
+        <p class="hint" id="sample-desc"></p>
+        <textarea id="source" spellcheck="false" wrap="off" aria-label="Assembler-broncode"></textarea>
+        <div class="row">
+          <button id="btn-assemble" class="primary">Assembleren &amp; laden</button>
+          <button id="btn-run">Laden &amp; starten</button>
+          <span id="asm-msg" class="msg"></span>
+        </div>
+      </div>
+
+      <div class="tab-body" data-tab="dbg">
+        <div class="row">
+          <button id="btn-pause">Pauze</button>
+          <button id="btn-step">Stap</button>
+          <label>Breekpunt $<input id="bp" class="hex4" maxlength="4" placeholder="----"></label>
+          <span id="dbg-state" class="msg"></span>
+        </div>
+        <div class="dbg-grid">
+          <div>
+            <h3>Registers</h3>
+            <table class="regs" id="regs"></table>
+            <h3>Disassembly</h3>
+            <pre id="disasm" class="mono"></pre>
+          </div>
+          <div>
+            <h3>Geheugen <input id="mem-addr" class="hex4" maxlength="4" value="0000" aria-label="Startadres"></h3>
+            <pre id="memdump" class="mono"></pre>
+          </div>
+        </div>
+      </div>
+
+      <div class="tab-body" data-tab="io">
+        <h3>Programma laden</h3>
+        <p class="hint">Papertape (<code>.ptp</code>, KIM-formaat, ook op de Junior gebruikt), Intel HEX (<code>.hex</code>) of een binair bestand (<code>.bin</code>, je kiest zelf het adres).</p>
+        <div class="row">
+          <input type="file" id="file-load" accept=".ptp,.pap,.hex,.ihx,.bin,.rom,.txt">
+          <label>Adres voor .bin $<input id="bin-addr" class="hex4" maxlength="4" value="0200"></label>
+        </div>
+        <h3>Geheugen opslaan</h3>
+        <div class="row">
+          <label>Van $<input id="save-from" class="hex4" maxlength="4" value="0200"></label>
+          <label>t/m $<input id="save-to" class="hex4" maxlength="4" value="03FF"></label>
+          <button id="btn-save-ptp">Als .ptp</button>
+          <button id="btn-save-bin">Als .bin</button>
+        </div>
+        <p id="io-msg" class="msg" role="status"></p>
+      </div>
+
+      <div class="tab-body" data-tab="set">
+        <div class="settings">
+          <label>Snelheid
+            <select id="speed">
+              <option value="1">1 MHz (echt)</option>
+              <option value="2">2 MHz</option>
+              <option value="5">5 MHz</option>
+              <option value="20">20 MHz (turbo)</option>
+            </select>
+          </label>
+          <label><input type="checkbox" id="expand"> Uitbreidingsgeheugen ($0400–$19FF en $2000–$DFFF)</label>
+          <div>
+            <p>Monitor-ROM: <strong id="rom-state">ingebouwde nabootsing</strong></p>
+            <p class="hint">De emulator bevat een eigen nabootsing van de Junior-monitor (keypadmonitor, hex-editor, assembler en sprongberekening). Heb je zelf een dump van de originele monitor-EPROM (1024 bytes, $1C00–$1FFF), dan kun je die hier laden; de emulator voert dan de echte ROM-code uit.</p>
+            <div class="row">
+              <input type="file" id="rom-file" accept=".bin,.rom">
+              <button id="btn-rom-hle">Ingebouwde monitor gebruiken</button>
+            </div>
+          </div>
+          <div class="row">
+            <button id="btn-poweron" class="danger">Uit- en aanzetten (geheugen wissen)</button>
+          </div>
+          <p id="set-msg" class="msg" role="status"></p>
+        </div>
+      </div>
+
+      <div class="tab-body help" data-tab="help">
+        <h3>Wat is de Junior Computer?</h3>
+        <p>De Junior Computer verscheen in 1980 als bouwproject in Elektor (in Nederland: Elektuur), met een reeks boeken waarin je stap voor stap leerde programmeren. Het ontwerp leunt sterk op de KIM-1, maar gebruikt gewone onderdelen: een 6532 RIOT (128 bytes RAM, twee poorten en een timer) en een 2708-EPROM van 1 KB met de monitor.</p>
+        <h3>Het keypad</h3>
+        <table class="keys">
+          <tr><th>Toets</th><th>Functie</th><th>Toetsenbord</th></tr>
+          <tr><td>0–F</td><td>Hexadecimaal cijfer</td><td><kbd>0</kbd>–<kbd>9</kbd>, <kbd>A</kbd>–<kbd>F</kbd></td></tr>
+          <tr><td>AD</td><td>Adresmodus: cijfers wijzigen het adres (linker 4 cijfers)</td><td><kbd>Q</kbd> of <kbd>Shift</kbd>+<kbd>A</kbd></td></tr>
+          <tr><td>DA</td><td>Datamodus: cijfers wijzigen de byte op dat adres (rechter 2 cijfers)</td><td><kbd>W</kbd> of <kbd>Shift</kbd>+<kbd>D</kbd></td></tr>
+          <tr><td>+</td><td>Volgend adres</td><td><kbd>+</kbd>, <kbd>=</kbd> of <kbd>spatie</kbd></td></tr>
+          <tr><td>PC</td><td>Toon het adres waar het programma stopte</td><td><kbd>P</kbd></td></tr>
+          <tr><td>GO</td><td>Start het programma op het getoonde adres</td><td><kbd>G</kbd> of <kbd>Enter</kbd></td></tr>
+          <tr><td>ST</td><td>Stop (NMI): via de vector op <code>$1A7A</code> terug naar de monitor</td><td><kbd>Esc</kbd> of <kbd>S</kbd></td></tr>
+          <tr><td>RST</td><td>Reset</td><td><kbd>R</kbd></td></tr>
+          <tr><td>STEP</td><td>Stap voor stap: na elke instructie buiten de monitor-EPROM volgt een NMI</td><td><kbd>T</kbd> (aan/uit)</td></tr>
+        </table>
+        <h3>Een programma intikken</h3>
+        <ol>
+          <li>Druk <b>AD</b> en tik het adres <code>0200</code>.</li>
+          <li>Druk <b>DA</b> en tik een byte, bijv. <code>A9</code>. Druk <b>+</b> voor het volgende adres en tik verder.</li>
+          <li>Ga terug met <b>AD</b> <code>0200</code> en druk <b>GO</b>.</li>
+        </ol>
+        <p>Voorbeeld: <code>0200: A9 42 00</code> laadt $42 in A en keert met BRK terug naar de monitor. A staat daarna op <code>$00F3</code>.</p>
+        <h3>De hex-editor ($1CB5)</h3>
+        <p>De Junior-monitor heeft een editor die per instructie werkt. Zet eerst het begin van je werkgebied op <code>$00E2/$00E3</code> (BEGAD, laag/hoog) en het einde op <code>$00E4/$00E5</code> (ENDAD), bijvoorbeeld <code>00 02</code> en <code>00 03</code>. Start dan met <b>AD</b> <code>1CB5</code> <b>GO</b>. Het display toont de huidige instructie; <code>77</code> markeert het einde.</p>
+        <table class="keys">
+          <tr><td><b>AD</b> (insert)</td><td>Tik een instructie in; die komt vóór de getoonde instructie</td></tr>
+          <tr><td><b>GO</b> (input)</td><td>Tik een instructie in; die komt ná de getoonde instructie</td></tr>
+          <tr><td><b>+</b> (skip)</td><td>Naar de volgende instructie</td></tr>
+          <tr><td><b>DA</b> (delete)</td><td>Wis de getoonde instructie</td></tr>
+          <tr><td><b>PC</b> (search)</td><td>Tik twee bytes; de editor zoekt de instructie die zo begint</td></tr>
+        </table>
+        <p>Het display toont <code>EEEEEE</code> bij een fout. Je verlaat de editor met RST.</p>
+        <h3>De assembler ($1F51)</h3>
+        <p>Labels maak je in de editor met de pseudo-instructie <code>FF nn</code> (label nummer nn). In JMP-, JSR- en spronginstructies tik je als adres het labelnummer, bijv. <code>4C 01 00</code> of <code>D0 01</code>. <b>AD</b> <code>1F51</code> <b>GO</b> haalt de labels weg en vult de echte adressen en sprongafstanden in.</p>
+        <h3>Sprongafstand berekenen ($1FD5)</h3>
+        <p><b>AD</b> <code>1FD5</code> <b>GO</b>, tik het lage byte van het adres van de sprongopdracht en daarna dat van het doel. Rechts verschijnt de afstand voor de spronginstructie. Je stopt met RST.</p>
+        <h3>Nuttige monitorroutines</h3>
+        <table class="keys">
+          <tr><td><code>$1D8E</code> SCANDS</td><td>Toon POINTH ($FB), POINTL ($FA) en INH ($F9); aantal bytes in BYTES ($F6). A≠0 als er een toets is ingedrukt</td></tr>
+          <tr><td><code>$1D88</code> SCAND</td><td>Zoals SCANDS, maar toont de byte op adres POINT</td></tr>
+          <tr><td><code>$1DF9</code> GETKEY</td><td>A = toetscode (0–F, AD=10, DA=11, +=12, GO=13, PC=14), $15 = geen toets</td></tr>
+          <tr><td><code>$1DB1</code> AK</td><td>A≠0 als er een toets is ingedrukt</td></tr>
+          <tr><td><code>$1D6F</code> GETBYT</td><td>Wacht op twee hextoetsen en geeft de byte in A (N=1), of een commandotoets (N=0)</td></tr>
+          <tr><td><code>$1DCC</code> SHOW</td><td>Toon A als twee cijfers op positie X ($08, $0C of $10)</td></tr>
+          <tr><td><code>$1C33</code> START</td><td>Terug naar de monitor (<code>JMP $1C33</code>)</td></tr>
+          <tr><td><code>$1F0F</code> LOOK</td><td>Segmentpatronen voor 0–F (actief laag)</td></tr>
+        </table>
+        <h3>Hardware</h3>
+        <p>Het display wordt gemultiplext via de 6532: poort A (<code>$1A80</code>, richting <code>$1A81</code>) levert de segmenten, <b>actief laag</b> (0 = segment aan, bit 0 = a … bit 6 = g). Poort B (<code>$1A82</code>, richting <code>$1A83</code>) kiest met bits 1–4 het cijfer (waarde 4–9) of een keypad-rij (0–2). De timer schrijf je op <code>$1AF4</code>–<code>$1AF7</code> (÷1, ÷8, ÷64, ÷1024; met IRQ <code>$1AFC</code>–<code>$1AFF</code>); bit 7 van <code>$1AD5</code> geeft aan dat hij is afgelopen. De IRQ-uitgang van de 6532 is met de 6502 verbonden.</p>
+        <p>De NMI- en IRQ/BRK-vectoren op <code>$1A7A</code> en <code>$1A7E</code> staan bij het aanzetten al op <code>$1C00</code>, zoals de handleiding beginners aanraadt. Op een echte Junior moest je die eerst zelf intikken.</p>
+      </div>
+    </section>
+  </main>
+
+  <script type="module" src="js/junior-main.js"></script>
+</body>
+</html>
