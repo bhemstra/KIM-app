@@ -1,4 +1,5 @@
 :root {
+  color-scheme: dark;
   --bg: #15171a;
   --panel: #1f2328;
   --panel-2: #262b31;
@@ -314,4 +315,21 @@ kbd {
   border-bottom-width: 2px;
   border-radius: 3px;
   padding: 0 4px;
+}
+
+.tty-input {
+  flex: 1;
+  min-width: 0;
+  background: var(--panel-2);
+  color: var(--text);
+  border: 1px solid #3a414a;
+  border-radius: 6px;
+  padding: 6px 10px;
+  font-family: var(--mono);
+  font-size: 16px; /* voorkomt inzoomen op iOS */
+}
+
+/* iOS zoomt in op invoervelden kleiner dan 16px */
+@media (pointer: coarse) {
+  input.hex4, select, textarea#source { font-size: 16px; }
 }

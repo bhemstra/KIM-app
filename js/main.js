@@ -204,7 +204,7 @@ document.querySelectorAll('.tabs button').forEach((b) => {
     document.querySelectorAll('.tabs button').forEach((x) => x.classList.toggle('active', x === b));
     document.querySelectorAll('.tab-body').forEach((x) => x.classList.toggle('active', x.dataset.tab === activeTab));
     if (activeTab === 'dbg') renderDebugger();
-    if (activeTab === 'tty') $('terminal').focus();
+    if (activeTab === 'tty' && !matchMedia('(pointer: coarse)').matches) $('terminal').focus();
   });
 });
 
@@ -396,6 +396,16 @@ function initTerminal() {
     e.preventDefault();
     for (const ch of e.clipboardData.getData('text')) kim.ttyInput.push(ch === '\n' ? '\r' : ch);
   });
+  // Invoerveld: nodig op telefoons, waar een <pre> geen toetsenbord oproept
+  const inp = $('tty-input');
+  inp.addEventListener('input', () => {
+    for (const ch of inp.value) kim.ttyInput.push(ch);
+    inp.value = '';
+  });
+  inp.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') { e.preventDefault(); kim.ttyInput.push('\r'); }
+    else if (e.key === 'Backspace' && inp.value === '') { e.preventDefault(); kim.ttyInput.push('\b'); }
+  });
   $('btn-tty-clear').addEventListener('click', () => { ttyText = ''; ttyDirty = true; });
 }
 
@@ -413,7 +423,7 @@ function download(name, data, type) {
 function readRange() {
   const from = parseInt($('save-from').value, 16);
   const to = parseInt($('save-to').value, 16);
-  if (Number.isNaN(from) || Number.isNaN(to) || to < from) { alert('Ongeldig adresbereik'); return null; }
+  if (Number.isNaN(from) || Number.isNaN(to) || to < from) { setMsg($('io-msg'), 'Ongeldig adresbereik.', 'err'); return null; }
   const bytes = [];
   for (let a = from; a <= to; a++) bytes.push(kim.peek(a));
   return { from, bytes };
@@ -466,9 +476,9 @@ function initFiles() {
       loadSegments(segments);
       const total = segments.reduce((n, s) => n + s.bytes.length, 0);
       if (kim.halted) kim.point = segments[0].start;
-      alert(`${file.name}: ${total} bytes geladen vanaf $${h4(segments[0].start)}.`);
+      setMsg($('io-msg'), `${file.name}: ${total} bytes geladen vanaf $${h4(segments[0].start)}.`, 'ok');
     } catch (err) {
-      alert(`Kan ${file.name} niet laden: ${err.message}`);
+      setMsg($('io-msg'), `Kan ${file.name} niet laden: ${err.message}`, 'err');
     }
     e.target.value = '';
   });
@@ -523,7 +533,7 @@ function initSettings() {
       kim.reset();
       paused = false;
     } catch (err) {
-      alert(err.message);
+      setMsg($('set-msg'), err.message, 'err');
     }
     e.target.value = '';
     updateRomState();
@@ -536,9 +546,19 @@ function initSettings() {
     updateRomState();
   });
   $('btn-poweron').addEventListener('click', () => {
-    if (!confirm('Het geheugen wordt gewist. Doorgaan?')) return;
+    // Twee keer klikken in plaats van confirm() (werkt niet overal, o.a. in ingesloten pagina's)
+    const btn = $('btn-poweron');
+    if (!btn.dataset.armed) {
+      btn.dataset.armed = '1';
+      btn.textContent = 'Nogmaals klikken om het geheugen te wissen';
+      setTimeout(() => { delete btn.dataset.armed; btn.textContent = 'Uit- en aanzetten (geheugen wissen)'; }, 4000);
+      return;
+    }
+    delete btn.dataset.armed;
+    btn.textContent = 'Uit- en aanzetten (geheugen wissen)';
     kim.powerOn();
     paused = false;
+    setMsg($('set-msg'), 'Geheugen gewist, KIM opnieuw gestart.', 'ok');
   });
 }
 

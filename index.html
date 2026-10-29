@@ -88,9 +88,12 @@
       </div>
 
       <div class="tab-body" data-tab="tty">
-        <p class="hint">Uitvoer van programma's die de TTY-routines van de monitor gebruiken (OUTCH, PRTBYT, CRLF, GETCH...). Klik in het venster om te typen.</p>
+        <p class="hint">Uitvoer van programma's die de TTY-routines van de monitor gebruiken (OUTCH, PRTBYT, CRLF, GETCH...). Klik in het venster om te typen, of gebruik het invoerveld eronder (op een telefoon).</p>
         <pre id="terminal" class="terminal" tabindex="0"></pre>
-        <div class="row"><button id="btn-tty-clear">Wissen</button></div>
+        <div class="row">
+          <input id="tty-input" class="tty-input" autocomplete="off" autocapitalize="characters" autocorrect="off" spellcheck="false" placeholder="Typ hier (Enter = return)" aria-label="Invoer voor de terminal">
+          <button id="btn-tty-clear">Wissen</button>
+        </div>
       </div>
 
       <div class="tab-body" data-tab="io">
@@ -107,6 +110,7 @@
           <button id="btn-save-ptp">Als .ptp</button>
           <button id="btn-save-bin">Als .bin</button>
         </div>
+        <p id="io-msg" class="msg" role="status"></p>
         <h3>Cassette</h3>
         <p class="hint">De monitorroutines DUMPT (<code>1800 GO</code>) en LOADT (<code>1873 GO</code>) gebruiken deze virtuele cassette. Zet vooraf: $17F5/$17F6 = beginadres, $17F7/$17F8 = eindadres + 1, $17F9 = ID (bij laden: $00 = naar adres in $17F5, $FF = eerste opname).</p>
         <ul id="tapes" class="tapes"></ul>
@@ -134,6 +138,7 @@
           <div class="row">
             <button id="btn-poweron" class="danger">Uit- en aanzetten (geheugen wissen)</button>
           </div>
+          <p id="set-msg" class="msg" role="status"></p>
         </div>
       </div>
 
