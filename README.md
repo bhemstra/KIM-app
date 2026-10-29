@@ -55,6 +55,9 @@ python3 -m http.server 8000
   (`JUNIOR_ROM=/pad/naar/monitor.bin npm test`): monitor, editor, assembler,
   sprongberekening en `SCANDS` gedragen zich identiek.
 
+De Junior bestaat ook als desktop-app voor Windows en macOS: zie
+[`desktop/README.md`](desktop/README.md).
+
 ## Snel proberen
 
 1. Druk **AD**, tik `0200`, druk **DA** en tik `A9` **+** `42` **+** `00`.

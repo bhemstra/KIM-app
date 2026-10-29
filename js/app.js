@@ -415,6 +415,15 @@ function initTerminal() {
 // ---------- Bestanden & tape ----------
 
 function download(name, data, type) {
+  // In de desktop-app (Tauri) via het opslagvenster van het systeem
+  const tauri = window.__TAURI__;
+  if (tauri) {
+    const bytes = typeof data === 'string' ? new TextEncoder().encode(data) : data;
+    tauri.core.invoke('save_file', { name, data: Array.from(bytes) })
+      .then((saved) => { if (saved) setMsg($('io-msg'), `${name} opgeslagen.`, 'ok'); })
+      .catch((err) => setMsg($('io-msg'), `Opslaan mislukt: ${err}`, 'err'));
+    return;
+  }
   const blob = new Blob([data], { type });
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);

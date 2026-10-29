@@ -1,0 +1,14 @@
+{
+  "name": "junior-computer-desktop",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "prepare-web": "node prepare.mjs",
+    "dev": "tauri dev",
+    "build": "tauri build",
+    "icons": "tauri icon app-icon.png"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "2.12.4"
+  }
+}

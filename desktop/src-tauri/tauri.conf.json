@@ -1,0 +1,45 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "Junior Computer",
+  "version": "1.0.0",
+  "identifier": "nl.hemstra.juniorcomputer",
+  "build": {
+    "frontendDist": "../dist",
+    "beforeBuildCommand": "node prepare.mjs",
+    "beforeDevCommand": "node prepare.mjs"
+  },
+  "app": {
+    "withGlobalTauri": true,
+    "windows": [
+      {
+        "label": "main",
+        "title": "Junior Computer",
+        "width": 1280,
+        "height": 860,
+        "minWidth": 420,
+        "minHeight": 600
+      }
+    ],
+    "security": {
+      "csp": null
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": "all",
+    "category": "Education",
+    "shortDescription": "Emulator van de Elektor Junior Computer (1980)",
+    "copyright": "Emulator: zie de repository. Junior Computer: Elektor.",
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ],
+    "macOS": {
+      "signingIdentity": "-",
+      "minimumSystemVersion": "10.15"
+    }
+  }
+}
