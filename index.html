@@ -1,0 +1,190 @@
+<!doctype html>
+<html lang="nl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>KIM-1 Emulator</title>
+  <meta name="description" content="Emulator van de MOS KIM-1 microcomputer (1976) met 6502-processor, LED-display, keypad, assembler en debugger.">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <header class="top">
+    <h1>KIM-1 <span>emulator</span></h1>
+    <p class="sub">MOS Technology, 1976 &middot; 6502 @ 1 MHz &middot; 1K RAM</p>
+  </header>
+
+  <main class="layout">
+    <!-- Het bord -->
+    <section class="board" aria-label="KIM-1 bord">
+      <div class="silk">MOS TECHNOLOGY, INC. &nbsp; KIM-1</div>
+      <div class="display-wrap">
+        <svg id="display" class="display" viewBox="0 0 330 80" role="img" aria-label="LED-display"></svg>
+      </div>
+
+      <div class="keypad-area">
+        <div class="keypad" id="keypad"></div>
+        <div class="side">
+          <label class="sst" title="Single STep: na elke instructie terug naar de monitor">
+            <span>SST</span>
+            <input type="checkbox" id="sst">
+            <span class="slider" aria-hidden="true"></span>
+            <span class="sst-state" id="sst-state">UIT</span>
+          </label>
+          <div class="status" id="status">MONITOR</div>
+        </div>
+      </div>
+
+      <div class="chips" aria-hidden="true">
+        <div class="chip big">MCS6502</div>
+        <div class="chip">6530-002</div>
+        <div class="chip">6530-003</div>
+      </div>
+    </section>
+
+    <!-- Panelen -->
+    <section class="panels">
+      <nav class="tabs" role="tablist">
+        <button role="tab" data-tab="asm" class="active">Assembler</button>
+        <button role="tab" data-tab="dbg">Debugger</button>
+        <button role="tab" data-tab="tty">Terminal</button>
+        <button role="tab" data-tab="io">Bestanden &amp; tape</button>
+        <button role="tab" data-tab="set">Instellingen</button>
+        <button role="tab" data-tab="help">Uitleg</button>
+      </nav>
+
+      <div class="tab-body active" data-tab="asm">
+        <div class="row">
+          <select id="sample"></select>
+          <button id="btn-load-sample">Voorbeeld openen</button>
+        </div>
+        <p class="hint" id="sample-desc"></p>
+        <textarea id="source" spellcheck="false" wrap="off" aria-label="Assembler-broncode"></textarea>
+        <div class="row">
+          <button id="btn-assemble" class="primary">Assembleren &amp; laden</button>
+          <button id="btn-run">Laden &amp; starten</button>
+          <span id="asm-msg" class="msg"></span>
+        </div>
+      </div>
+
+      <div class="tab-body" data-tab="dbg">
+        <div class="row">
+          <button id="btn-pause">Pauze</button>
+          <button id="btn-step">Stap</button>
+          <label>Breekpunt $<input id="bp" class="hex4" maxlength="4" placeholder="----"></label>
+          <span id="dbg-state" class="msg"></span>
+        </div>
+        <div class="dbg-grid">
+          <div>
+            <h3>Registers</h3>
+            <table class="regs" id="regs"></table>
+            <h3>Disassembly</h3>
+            <pre id="disasm" class="mono"></pre>
+          </div>
+          <div>
+            <h3>Geheugen <input id="mem-addr" class="hex4" maxlength="4" value="0000" aria-label="Startadres"></h3>
+            <pre id="memdump" class="mono"></pre>
+          </div>
+        </div>
+      </div>
+
+      <div class="tab-body" data-tab="tty">
+        <p class="hint">Uitvoer van programma's die de TTY-routines van de monitor gebruiken (OUTCH, PRTBYT, CRLF, GETCH...). Klik in het venster om te typen.</p>
+        <pre id="terminal" class="terminal" tabindex="0"></pre>
+        <div class="row"><button id="btn-tty-clear">Wissen</button></div>
+      </div>
+
+      <div class="tab-body" data-tab="io">
+        <h3>Programma laden</h3>
+        <p class="hint">Papertape (<code>.ptp</code>, KIM-formaat), Intel HEX (<code>.hex</code>) of een binair bestand (<code>.bin</code>, je kiest zelf het adres).</p>
+        <div class="row">
+          <input type="file" id="file-load" accept=".ptp,.pap,.hex,.ihx,.bin,.rom,.txt">
+          <label>Adres voor .bin $<input id="bin-addr" class="hex4" maxlength="4" value="0200"></label>
+        </div>
+        <h3>Geheugen opslaan</h3>
+        <div class="row">
+          <label>Van $<input id="save-from" class="hex4" maxlength="4" value="0200"></label>
+          <label>t/m $<input id="save-to" class="hex4" maxlength="4" value="03FF"></label>
+          <button id="btn-save-ptp">Als .ptp</button>
+          <button id="btn-save-bin">Als .bin</button>
+        </div>
+        <h3>Cassette</h3>
+        <p class="hint">De monitorroutines DUMPT (<code>1800 GO</code>) en LOADT (<code>1873 GO</code>) gebruiken deze virtuele cassette. Zet vooraf: $17F5/$17F6 = beginadres, $17F7/$17F8 = eindadres + 1, $17F9 = ID (bij laden: $00 = naar adres in $17F5, $FF = eerste opname).</p>
+        <ul id="tapes" class="tapes"></ul>
+      </div>
+
+      <div class="tab-body" data-tab="set">
+        <div class="settings">
+          <label>Snelheid
+            <select id="speed">
+              <option value="1">1 MHz (echt)</option>
+              <option value="2">2 MHz</option>
+              <option value="5">5 MHz</option>
+              <option value="20">20 MHz (turbo)</option>
+            </select>
+          </label>
+          <label><input type="checkbox" id="expand"> Uitbreidingsgeheugen ($0400–$13FF en $2000–$DFFF)</label>
+          <div>
+            <p>Monitor-ROM: <strong id="rom-state">ingebouwde nabootsing</strong></p>
+            <p class="hint">De emulator bevat een eigen nabootsing van de KIM-monitor. Heb je zelf een dump van de originele 6530-002/003 ROM's (2048 bytes, $1800–$1FFF), dan kun je die hier laden; de emulator voert dan de echte ROM-code uit.</p>
+            <div class="row">
+              <input type="file" id="rom-file" accept=".bin,.rom">
+              <button id="btn-rom-hle">Ingebouwde monitor gebruiken</button>
+            </div>
+          </div>
+          <div class="row">
+            <button id="btn-poweron" class="danger">Uit- en aanzetten (geheugen wissen)</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="tab-body help" data-tab="help">
+        <h3>Wat is de KIM-1?</h3>
+        <p>De KIM-1 (Keyboard Input Monitor) kwam in 1976 uit bij MOS Technology om de nieuwe 6502-processor te demonstreren. Het is een kale printplaat met 1 KB RAM, twee 6530 RRIOT-chips (ROM, RAM, I/O en een timer), zes rode 7-segment-LED's en een hexadecimaal keypad.</p>
+        <h3>Het keypad</h3>
+        <table class="keys">
+          <tr><th>Toets</th><th>Functie</th><th>Toetsenbord</th></tr>
+          <tr><td>0–F</td><td>Hexadecimaal cijfer</td><td><kbd>0</kbd>–<kbd>9</kbd>, <kbd>A</kbd>–<kbd>F</kbd></td></tr>
+          <tr><td>AD</td><td>Adresmodus: cijfers wijzigen het adres (linker 4 cijfers)</td><td><kbd>Q</kbd> of <kbd>Shift</kbd>+<kbd>A</kbd></td></tr>
+          <tr><td>DA</td><td>Datamodus: cijfers wijzigen de byte op dat adres (rechter 2 cijfers)</td><td><kbd>W</kbd> of <kbd>Shift</kbd>+<kbd>D</kbd></td></tr>
+          <tr><td>+</td><td>Volgend adres</td><td><kbd>+</kbd>, <kbd>=</kbd> of <kbd>spatie</kbd></td></tr>
+          <tr><td>PC</td><td>Toon het adres waar het programma stopte</td><td><kbd>P</kbd></td></tr>
+          <tr><td>GO</td><td>Start het programma op het getoonde adres</td><td><kbd>G</kbd> of <kbd>Enter</kbd></td></tr>
+          <tr><td>ST</td><td>Stop (NMI): terug naar de monitor</td><td><kbd>Esc</kbd> of <kbd>S</kbd></td></tr>
+          <tr><td>RS</td><td>Reset</td><td><kbd>R</kbd></td></tr>
+          <tr><td>SST</td><td>Single step: na elke instructie terug naar de monitor</td><td><kbd>T</kbd> (aan/uit)</td></tr>
+        </table>
+        <h3>Een programma intikken</h3>
+        <ol>
+          <li>Druk <b>AD</b> en tik het adres <code>0200</code>.</li>
+          <li>Druk <b>DA</b> en tik een byte, bijv. <code>A9</code>. Druk <b>+</b> voor het volgende adres en tik verder.</li>
+          <li>Ga terug met <b>AD</b> <code>0200</code> en druk <b>GO</b>.</li>
+        </ol>
+        <p>Voorbeeld (telt $10 en $11 op naar $12, daarna BRK terug naar de monitor):<br>
+          <code>0200: D8 18 A5 10 65 11 85 12 00</code></p>
+        <p>Makkelijker: kies in de <b>Assembler</b> een voorbeeld, klik <i>Assembleren &amp; laden</i> en druk <b>GO</b>.</p>
+        <h3>Registers bekijken</h3>
+        <p>Na ST, SST of BRK bewaart de monitor de registers in de zero page: PC op <code>$EF/$F0</code>, P op <code>$F1</code>, S op <code>$F2</code>, A op <code>$F3</code>, Y op <code>$F4</code>, X op <code>$F5</code>. GO laadt ze daar ook weer vandaan. Het tabblad <b>Debugger</b> toont alles direct.</p>
+        <h3>Nuttige monitorroutines</h3>
+        <table class="keys">
+          <tr><td><code>$1F1F</code> SCANDS</td><td>Toon POINTH ($FB), POINTL ($FA) en INH ($F9) één keer; A≠0 als er een toets is ingedrukt</td></tr>
+          <tr><td><code>$1F19</code> SCAND</td><td>Zoals SCANDS, maar toont de byte op adres POINT</td></tr>
+          <tr><td><code>$1F6A</code> GETKEY</td><td>A = toetscode (0–F, AD=10, DA=11, +=12, GO=13, PC=14), $15 = geen toets</td></tr>
+          <tr><td><code>$1EFE</code> AK</td><td>A≠0 als er een toets is ingedrukt</td></tr>
+          <tr><td><code>$1F63</code> INCPT</td><td>POINT ophogen</td></tr>
+          <tr><td><code>$1EA0</code> OUTCH</td><td>Teken in A naar de terminal</td></tr>
+          <tr><td><code>$1E5A</code> GETCH</td><td>Wacht op een teken van de terminal, in A</td></tr>
+          <tr><td><code>$1E3B</code> PRTBYT</td><td>A als twee hexcijfers naar de terminal</td></tr>
+          <tr><td><code>$1E2F</code> CRLF</td><td>Nieuwe regel op de terminal</td></tr>
+          <tr><td><code>$1C4F</code> START</td><td>Terug naar de monitor (<code>JMP $1C4F</code>)</td></tr>
+          <tr><td><code>$1FE7</code> TABLE</td><td>Segmentpatronen voor 0–F</td></tr>
+        </table>
+        <h3>Hardware</h3>
+        <p>Het display wordt gemultiplext via de 6530-002: poort A (<code>$1740</code>, richting <code>$1741</code>) levert de segmenten (bit 0 = a … bit 6 = g), poort B (<code>$1742</code>, richting <code>$1743</code>) kiest met bits 1–4 het cijfer (waarde 4–9) of een keypad-rij (0–2). De timer zit op <code>$1744</code>–<code>$1747</code> (÷1, ÷8, ÷64, ÷1024). Poorten A en B van de 6530-003 op <code>$1700</code>–<code>$1703</code> zijn vrij voor eigen gebruik.</p>
+        <p>De NMI- en IRQ/BRK-vectoren op <code>$17FA</code> en <code>$17FE</code> staan bij het aanzetten al op <code>$1C00</code>. Op een echte KIM-1 moest je die eerst zelf intikken.</p>
+      </div>
+    </section>
+  </main>
+
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>
