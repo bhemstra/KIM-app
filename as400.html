@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="nl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>AS/400 Simulatie</title>
+  <meta name="description" content="Een nagebootste IBM AS/400 in de browser: 5250-groenscherm, menu's, CL-commando's en -programma's, PDM en SEU, interactieve SQL, spoolbestanden en WRKACTJOB.">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body class="as400-page">
+  <header class="top">
+    <h1>AS/400 <span>simulatie</span></h1>
+    <p class="sub">SIM400 &middot; 5250-terminal &middot; CL, PDM, SEU en SQL &middot; geen IBM-code, alles nagebootst</p>
+    <nav class="machines" aria-label="Kies een computer">
+      <a href="index.html">KIM-1</a>
+      <a href="junior.html">Junior Computer</a>
+      <a href="as400.html" aria-current="page">AS/400</a>
+    </nav>
+  </header>
+
+  <main class="as400-layout">
+    <section class="crt" aria-label="5250-terminal">
+      <div class="screen-wrap" id="screen-wrap">
+        <div class="term" id="term" role="application" aria-label="5250-scherm, 24 regels van 80 tekens"></div>
+        <div class="power-off" id="power-off" hidden>
+          <p>Het systeem staat uit.</p>
+          <button id="btn-ipl" class="primary">Aanzetten (IPL)</button>
+        </div>
+      </div>
+      <div class="oia" id="oia" aria-live="polite"></div>
+      <div class="fkeys" id="fkeys" aria-label="Functietoetsen"></div>
+    </section>
+
+    <section class="panels">
+      <nav class="tabs" role="tablist">
+        <button role="tab" data-tab="help" class="active">Uitleg</button>
+        <button role="tab" data-tab="try">Probeer dit</button>
+        <button role="tab" data-tab="set">Instellingen</button>
+      </nav>
+
+      <div class="tab-body help active" data-tab="help">
+        <h3>Wat is dit?</h3>
+        <p>De IBM AS/400 (1988, later iSeries, System&nbsp;i en nu IBM&nbsp;i) was dé middelgrote computer van banken, groothandels en gemeenten. Je werkte ermee via een 5250-terminal: een groen scherm van 24 regels van 80 tekens, met invoervelden en functietoetsen.</p>
+        <p>Dit is geen emulator van de echte hardware: het besturingssysteem OS/400 is van IBM en niet vrij te gebruiken. Het is een <em>nabootsing</em> van hoe het systeem werkt en aanvoelt. Menu's, CL-commando's, de prompter, PDM, SEU, interactieve SQL, spoolbestanden en jobs zijn allemaal opnieuw gemaakt in JavaScript.</p>
+
+        <h3>Aanmelden</h3>
+        <p>Gebruiker <code>QSECOFR</code> met wachtwoord <code>QSECOFR</code> (beheerder), of <code>GAST</code> / <code>GAST</code>. Met <kbd>Tab</kbd> ga je naar het volgende veld.</p>
+
+        <h3>Toetsen</h3>
+        <table class="keys">
+          <tr><th>5250</th><th>Toetsenbord</th><th>Betekenis</th></tr>
+          <tr><td>Enter</td><td><kbd>Enter</kbd></td><td>Scherm verwerken, opdracht uitvoeren</td></tr>
+          <tr><td>F1</td><td><kbd>F1</kbd></td><td>Help</td></tr>
+          <tr><td>F3</td><td><kbd>F3</kbd></td><td>Exit: terug naar het menu</td></tr>
+          <tr><td>F4</td><td><kbd>F4</kbd></td><td>Prompt: de parameters van een opdracht invullen</td></tr>
+          <tr><td>F5</td><td><kbd>F5</kbd></td><td>Verversen</td></tr>
+          <tr><td>F9</td><td><kbd>F9</kbd></td><td>Vorige opdracht terughalen</td></tr>
+          <tr><td>F12</td><td><kbd>F12</kbd> of <kbd>Esc</kbd></td><td>Cancel: één scherm terug</td></tr>
+          <tr><td>F13–F24</td><td><kbd>Shift</kbd>+<kbd>F1</kbd>–<kbd>F12</kbd></td><td>Bijv. F16 = herhaal zoeken, F19/F20 = schuif links/rechts</td></tr>
+          <tr><td>Roll Up / Down</td><td><kbd>Page Down</kbd> / <kbd>Page Up</kbd></td><td>Volgende / vorige pagina</td></tr>
+          <tr><td>Veld omhoog/omlaag</td><td><kbd>↑</kbd> / <kbd>↓</kbd></td><td>Naar het invoerveld op de regel erboven/eronder</td></tr>
+        </table>
+        <p class="hint">Sommige browsers houden F-toetsen voor zichzelf (F5 = herladen, F11, F12). Gebruik dan de knoppen onder het scherm, of klik op een tekst als <code>F3=Exit</code> op het scherm zelf.</p>
+
+        <h3>Wat zit erin</h3>
+        <ul>
+          <li><b>Menu's</b>: MAIN, USER, SYSTEM, DATA, PROGRAM en PDM, met keuzenummers en een opdrachtregel.</li>
+          <li><b>58 systeemopdrachten</b> met de prompter (F4), onder meer <code>WRKACTJOB</code>, <code>WRKSYSSTS</code>, <code>WRKSPLF</code>, <code>DSPMSG</code>/<code>SNDMSG</code>, <code>CRTLIB</code>, <code>WRKOBJ</code>, <code>DSPPFM</code>, <code>DSPFFD</code>, <code>CPYF</code>, <code>RUNQRY</code>, <code>SBMJOB</code>, <code>CRTUSRPRF</code> en <code>PWRDWNSYS</code>. <code>WRKCMD</code> toont ze allemaal.</li>
+          <li><b>PDM en SEU</b>: broncode bewerken met regelcommando's (<code>I</code>, <code>D</code>, <code>C</code>/<code>M</code> met <code>A</code>/<code>B</code>, <code>R</code>, <code>DD</code>, <code>CC</code>, <code>MM</code>) en F4 om een CL-regel te prompten.</li>
+          <li><b>CL-programma's</b>: compileren met optie 14 of <code>CRTCLPGM</code>/<code>CRTBNDCL</code>, met een compileerlijst als spoolbestand. Ondersteund: <code>DCL</code>, <code>CHGVAR</code>, <code>IF</code>/<code>ELSE</code>, <code>DO</code>, <code>DOWHILE</code>, <code>DOUNTIL</code>, <code>DOFOR</code>, <code>SELECT</code>/<code>WHEN</code>, <code>GOTO</code>, <code>MONMSG</code>, <code>SNDPGMMSG</code>, <code>SNDUSRMSG</code> (met antwoord), <code>RTVJOBA</code>, <code>RTVSYSVAL</code>, <code>CALL</code> met parameters, en ingebouwde functies zoals <code>%SST</code> en <code>%TRIM</code>.</li>
+          <li><b>SQL</b> (<code>STRSQL</code> en <code>RUNSQL</code>): SELECT met joins, GROUP BY, subquery's en ORDER BY, plus INSERT, UPDATE, DELETE, CREATE TABLE en DROP. Tabellen schrijf je als <code>DEMO/KLANTEN</code> of <code>DEMO.KLANTEN</code>.</li>
+          <li><b>Jobs en spool</b>: je eigen interactieve job, een rij achtergrondjobs, batchjobs via <code>SBMJOB</code> en spoolbestanden die je kunt bekijken.</li>
+        </ul>
+        <p>Alles wat je aanmaakt (bibliotheken, bestanden, broncode, programma's, berichten) wordt in je browser bewaard. Onder <em>Instellingen</em> kun je de schijf exporteren of terugzetten.</p>
+      </div>
+
+      <div class="tab-body help" data-tab="try">
+        <h3>Een rondleiding</h3>
+        <ol>
+          <li>Meld je aan als <code>QSECOFR</code> / <code>QSECOFR</code>.</li>
+          <li>Typ <code>WRKACTJOB</code> en druk Enter. Je ziet je eigen job (<code>QPADEV0001</code>) tussen de subsystemen. F5 ververst, F3 gaat terug.</li>
+          <li>Typ <code>CRTLIB</code> en druk <b>F4</b>: de prompter. Vul een naam in, bijvoorbeeld <code>PROEF</code>, en druk Enter.</li>
+          <li>Typ <code>WRKMBRPDM DEMO/QCLSRC</code>. Zet <code>14</code> voor <code>HALLO</code> (compileren), druk Enter, en typ daarna <code>CALL HALLO</code>.</li>
+          <li>Compileer ook <code>RAAD</code> en start het met <code>CALL RAAD</code>: een raadspelletje in CL dat met <code>SNDUSRMSG</code> om je antwoord vraagt.</li>
+          <li>Zet <code>2</code> voor een member om hem in SEU te bewerken. Typ <code>I</code> in een volgnummer om regels in te voegen, zet de cursor op een opdracht en druk F4 om hem te prompten. F3 bewaart.</li>
+          <li><code>STRSQL</code> en dan bijvoorbeeld:<br><code>SELECT k.NAAM, SUM(o.AANTAL * a.PRIJS) FROM DEMO/ORDERS o JOIN DEMO/KLANTEN k ON k.KLNR = o.KLNR JOIN DEMO/ARTIKELEN a ON a.ARTNR = o.ARTNR GROUP BY k.NAAM</code></li>
+          <li><code>WRKSPLF</code> toont de compileerlijsten. Met optie 5 bekijk je ze.</li>
+          <li><code>SBMJOB CMD(CALL TELLER PARM(10))</code> draait een programma in batch. Daarna staat er een bericht voor je klaar: zie <code>MW</code> in de statusregel, en <code>DSPMSG</code>.</li>
+          <li>Durf je? <code>PWRDWNSYS RESTART(*YES)</code> en bevestig met F16.</li>
+        </ol>
+        <h3>Een eigen CL-programma</h3>
+        <pre class="mono">             PGM        PARM(&amp;NAAM)
+             DCL        VAR(&amp;NAAM) TYPE(*CHAR) LEN(20)
+             IF         COND(&amp;NAAM *EQ ' ') THEN(CHGVAR +
+                          VAR(&amp;NAAM) VALUE('wereld'))
+             SNDPGMMSG  MSG('Hallo,' *BCAT &amp;NAAM)
+             ENDPGM</pre>
+        <p class="hint">Maak het aan met <code>STRSEU DEMO/QCLSRC GROET</code>, compileer met <code>CRTCLPGM GROET</code> en start met <code>CALL GROET PARM('Kim')</code>.</p>
+      </div>
+
+      <div class="tab-body" data-tab="set">
+        <div class="settings">
+          <div>
+            <h3>Systeem</h3>
+            <div class="row">
+              <button id="btn-reipl">Opnieuw opstarten (IPL)</button>
+              <button id="btn-export">Schijf exporteren (.json)</button>
+              <label class="file-btn">Schijf importeren <input type="file" id="file-import" accept=".json,application/json"></label>
+            </div>
+            <p class="hint">Opnieuw opstarten meldt iedereen af maar laat de schijf intact. Een export bevat al je bibliotheken, broncode, gebruikers en spoolbestanden.</p>
+          </div>
+          <div>
+            <h3>Fabrieksinstellingen</h3>
+            <div class="row">
+              <button id="btn-factory" class="danger">Schijf wissen</button>
+            </div>
+            <p class="hint">Zet de schijf terug zoals bij de eerste keer: alleen de demobibliotheek en de standaardgebruikers.</p>
+          </div>
+          <p id="set-msg" class="msg" role="status"></p>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script type="module" src="js/as400-main.js"></script>
+</body>
+</html>

@@ -1,12 +1,14 @@
-# KIM-1 en Junior Computer emulator
+# KIM-1, Junior Computer en AS/400
 
-Twee emulators van 6502-eenbordscomputers, die in de browser draaien zonder
-installatie, build-stap of afhankelijkheden:
+Drie oude computers die in de browser draaien zonder installatie, build-stap of
+afhankelijkheden:
 
 - **MOS KIM-1** (1976), de computer waarmee MOS Technology de 6502 introduceerde
   (`index.html`);
 - **Elektor/Elektuur Junior Computer** (1980), het bouwproject dat sterk op de
-  KIM-1 lijkt (`junior.html`).
+  KIM-1 lijkt (`junior.html`);
+- **IBM AS/400** (1988), als simulatie van het systeem achter een 5250-terminal
+  (`as400.html`, zie [hieronder](#as400-simulatie)).
 
 ![KIM-1: zes LED-cijfers, een hexadecimaal keypad en de SST-schakelaar](docs/screenshot.png)
 
@@ -69,6 +71,40 @@ Of kies in de assembler een voorbeeld en klik **Laden & starten**.
 Toetsenbord: `0–9 A–F` cijfers, `Q` = AD, `W` = DA, spatie/`+` = +, `G`/Enter = GO,
 `P` = PC, `Esc`/`S` = ST, `R` = RS, `T` = SST aan/uit.
 
+## AS/400-simulatie
+
+De AS/400 is geen emulator van de hardware maar een nabootsing van hoe het
+systeem werkt en aanvoelt: OS/400 is van IBM en niet vrij te gebruiken, dus er zit
+geen IBM-code in. Meld je aan als `QSECOFR`/`QSECOFR` of `GAST`/`GAST`.
+
+- **5250-scherm** van 24×80 met invoervelden, kleuren, functietoetsen F1–F24,
+  Roll Up/Down, een statusregel (met `MW` als er een bericht is) en knoppen voor
+  telefoons. Teksten als `F3=Exit` zijn aanklikbaar.
+- **Menu's** (MAIN, USER, SYSTEM, DATA, PROGRAM, PDM) en **Command Entry**
+  (`CALL QCMD`).
+- **58 systeemopdrachten** met de **prompter** (F4) en controle van parameters,
+  onder meer `WRKACTJOB`, `WRKSYSSTS`, `WRKJOB`, `DSPJOBLOG`, `WRKSPLF`,
+  `SNDMSG`/`DSPMSG`, `CRTLIB`/`DLTLIB`, `ADDLIBLE`, `WRKOBJ`, `DSPOBJD`,
+  `CRTPF`, `CRTSRCPF`, `DSPPFM`, `DSPFD`, `DSPFFD`, `CPYF`, `RUNQRY`,
+  `CRTUSRPRF`, `WRKSYSVAL`/`CHGSYSVAL`, `SBMJOB` en `PWRDWNSYS` (met IPL).
+  `WRKCMD` toont ze allemaal.
+- **PDM en SEU**: `WRKLIBPDM`, `WRKOBJPDM`, `WRKMBRPDM` met opties (2 = bewerken,
+  14 = compileren, 16 = starten …) en een editor met regelcommando's (`I`, `D`,
+  `C`/`M` + `A`/`B`, `R`, `DD`, `CC`, `MM`, `RR`) en F4 om een CL-regel te prompten.
+- **CL-programma's**: `CRTCLPGM`/`CRTBNDCL` met een compileerlijst in de spool;
+  `DCL`, `CHGVAR`, `IF`/`ELSE`, `DO`, `DOWHILE`, `DOUNTIL`, `DOFOR`, `LEAVE`,
+  `ITERATE`, `SELECT`/`WHEN`/`OTHERWISE`, `GOTO`, `MONMSG` (ook `EXEC(DO)` en
+  programmabreed), `SNDPGMMSG`, `SNDUSRMSG` (wacht op een antwoord), `RTVJOBA`,
+  `RTVSYSVAL`, `CALL` met parameters en ingebouwde functies als `%SST` en `%TRIM`.
+- **SQL**: `STRSQL` en `RUNSQL` met SELECT (joins, GROUP BY/HAVING, subquery's,
+  CASE, ORDER BY, FETCH FIRST), INSERT, UPDATE, DELETE, CREATE TABLE (ook
+  `AS (SELECT …) WITH DATA`), DROP en CREATE SCHEMA, met DB2-achtige meldingen.
+- **Demobibliotheek** `DEMO` met tabellen (`KLANTEN`, `ARTIKELEN`, `ORDERS`) en
+  CL-voorbeelden: `HALLO`, `RAAD` (raad het getal), `TELLER` en `KLANTRPT` (SQL
+  vanuit CL).
+- De **schijf** (bibliotheken, broncode, programma's, gebruikers, berichten,
+  spool) wordt in `localStorage` bewaard en kan geëxporteerd en geïmporteerd worden.
+
 ## Tests
 
 ```sh
@@ -91,3 +127,11 @@ KLAUS_BIN=/pad/naar/6502_functional_test.bin npm test
 | `js/assembler.js`, `js/disasm.js` | assembler en disassembler |
 | `js/fileformats.js` | papertape en Intel HEX |
 | `js/samples.js`, `js/samples-junior.js` | voorbeeldprogramma's |
+| `js/as400/screen.js` | AS/400: het 5250-schermmodel (24×80, velden, kleuren) |
+| `js/as400/cl.js`, `js/as400/clpgm.js` | CL ontleden, expressies, compiler en interpreter |
+| `js/as400/sql.js` | SQL-engine |
+| `js/as400/db.js`, `js/as400/system.js` | schijfinhoud, demogegevens, bibliotheeklijst, jobs, spool |
+| `js/as400/commands.js` | de CL-opdrachten en hun parameters |
+| `js/as400/panels.js`, `js/as400/work.js`, `js/as400/seu.js` | schermen: menu's, prompter, WRK-lijsten, SQL, SEU |
+| `js/as400/session.js` | sessie: schermstapel, toetsen, programma's |
+| `js/as400-main.js` | tekent het scherm in de browser (startpunt van `as400.html`) |
