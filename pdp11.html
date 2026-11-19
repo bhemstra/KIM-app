@@ -1,0 +1,311 @@
+<!doctype html>
+<html lang="nl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>PDP-11 Emulator</title>
+  <meta name="description" content="Emulator van de DEC PDP-11/40 (1972) met frontpaneel, terminal, console-ODT, MACRO-11-assembler, debugger, ponsband en ponskaartlezer.">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body class="pdp11-page">
+  <header class="top">
+    <h1>PDP-11/40 <span>emulator</span></h1>
+    <p class="sub">Digital Equipment Corporation, 1972 &middot; 16-bit &middot; 56 KB kerngeheugen &middot; terminal, klok, ponsband en ponskaartlezer</p>
+    <nav class="machines" aria-label="Kies een computer">
+      <a href="index.html">KIM-1</a>
+      <a href="junior.html">Junior Computer</a>
+      <a href="pdp11.html" aria-current="page">PDP-11</a>
+    </nav>
+  </header>
+
+  <main class="layout11">
+    <!-- Frontpaneel -->
+    <section class="front" aria-label="Frontpaneel">
+      <div class="front-head">
+        <div class="logo"><b>digital</b> <span>pdp11/40</span></div>
+        <div class="state-lamps">
+          <span class="slamp" id="lamp-run"><i></i>RUN</span>
+          <span class="slamp" id="lamp-wait"><i></i>WAIT</span>
+          <span class="slamp" id="lamp-halt"><i></i>CONSOLE</span>
+        </div>
+      </div>
+
+      <div class="rows">
+        <div class="lrow">
+          <div class="rlabel">ADDRESS <output id="addr-oct">000000</output></div>
+          <div class="bits" id="addr-lamps"></div>
+        </div>
+        <div class="lrow">
+          <div class="rlabel">DATA <output id="data-oct">000000</output></div>
+          <div class="bits" id="data-lamps"></div>
+        </div>
+        <div class="lrow">
+          <div class="rlabel">
+            SWITCH REGISTER
+            <label class="sr-input">octaal <input id="sr-oct" class="oct6" maxlength="6" value="000000" inputmode="numeric" aria-label="Schakelaars als octaal getal"></label>
+          </div>
+          <div class="bits" id="switches"></div>
+        </div>
+      </div>
+
+      <div class="controls">
+        <button type="button" class="ctl" id="ctl-load" title="Het adres van de schakelaars overnemen">LOAD<br>ADRS</button>
+        <button type="button" class="ctl" id="ctl-exam" title="Inhoud van het adres tonen; nog eens = volgend adres">EXAM</button>
+        <button type="button" class="ctl" id="ctl-cont" title="Doorgaan (met HALT: één instructie)">CONT</button>
+        <button type="button" class="ctl toggle" id="ctl-halt" aria-pressed="false" title="ENABLE / HALT">ENABLE<br>HALT</button>
+        <button type="button" class="ctl" id="ctl-start" title="Reset en start op het geladen adres">START</button>
+        <button type="button" class="ctl" id="ctl-dep" title="Schakelaars in het geheugen zetten; nog eens = volgend adres">DEP</button>
+        <span class="panel-msg" id="panel-msg" role="status"></span>
+      </div>
+    </section>
+
+    <div class="lower">
+      <!-- Terminal -->
+      <section class="tty-card" aria-label="Terminal">
+        <div class="tty-head">
+          <h3>Terminal <span class="hint">DL11 &middot; <span id="tty-mode">console-ODT</span></span></h3>
+          <button type="button" id="btn-tty-clear" class="small">Wissen</button>
+        </div>
+        <pre id="terminal" class="terminal" tabindex="0" aria-label="Terminal: klik en typ"></pre>
+        <div class="row">
+          <input id="tty-input" class="tty-input" placeholder="Typ hier (of klik in de terminal)" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false">
+          <button type="button" id="btn-tty-lf" class="small" title="Linefeed: in de ODT naar het volgende adres">LF</button>
+        </div>
+        <p class="hint">Staat de processor stil, dan praat je met de <b>console-ODT</b>: bijvoorbeeld <code>1000G</code> start op adres 1000, <code>1000/</code> toont een woord. Zie <em>Uitleg</em>.</p>
+      </section>
+
+      <!-- Panelen -->
+      <section class="panels">
+        <nav class="tabs" role="tablist">
+          <button role="tab" data-tab="asm" class="active">Assembler</button>
+          <button role="tab" data-tab="dbg">Debugger</button>
+          <button role="tab" data-tab="cards">Ponskaarten</button>
+          <button role="tab" data-tab="io">Bestanden</button>
+          <button role="tab" data-tab="set">Instellingen</button>
+          <button role="tab" data-tab="help">Uitleg</button>
+        </nav>
+
+        <div class="tab-body active" data-tab="asm">
+          <div class="row">
+            <select id="sample"></select>
+            <button id="btn-load-sample">Voorbeeld openen</button>
+          </div>
+          <p class="hint" id="sample-desc"></p>
+          <textarea id="source" spellcheck="false" wrap="off" aria-label="MACRO-11-broncode"></textarea>
+          <div class="row">
+            <button id="btn-assemble" class="primary">Assembleren &amp; laden</button>
+            <button id="btn-run">Laden &amp; starten</button>
+            <span id="asm-msg" class="msg"></span>
+          </div>
+          <details class="listing">
+            <summary>Listing (octaal)</summary>
+            <pre id="listing" class="mono"></pre>
+          </details>
+        </div>
+
+        <div class="tab-body" data-tab="dbg">
+          <div class="row">
+            <button id="btn-pause">Halt</button>
+            <button id="btn-step">Stap</button>
+            <label>Breekpunt <input id="bp" class="oct6" maxlength="6" placeholder="------" inputmode="numeric"></label>
+            <span id="dbg-state" class="msg"></span>
+          </div>
+          <div class="dbg-grid">
+            <div>
+              <h3>Registers</h3>
+              <table class="regs" id="regs"></table>
+              <h3>Disassembly</h3>
+              <pre id="disasm" class="mono"></pre>
+            </div>
+            <div>
+              <h3>Geheugen <input id="mem-addr" class="oct6" maxlength="6" value="001000" aria-label="Startadres (octaal)" inputmode="numeric"></h3>
+              <pre id="memdump" class="mono"></pre>
+            </div>
+          </div>
+        </div>
+
+        <div class="tab-body" data-tab="cards">
+          <p class="hint">Elke regel is één ponskaart van 80 kolommen. Leg de stapel in de <b>CR11-kaartlezer</b> en start een programma dat kaarten leest, zoals het voorbeeld <em>Ponskaarten lezen</em>. Kleine letters worden hoofdletters; een kaart kent alleen de tekens van de DEC 029-ponsmachine.</p>
+          <textarea id="card-text" class="cards-text" spellcheck="false" wrap="off" aria-label="Kaartenstapel: één kaart per regel"></textarea>
+          <div class="row">
+            <button id="btn-cards-load" class="primary">In de kaartlezer leggen</button>
+            <button id="btn-cards-clear">Kaartlezer leegmaken</button>
+            <label class="file-btn">Tekstbestand&hellip; <input type="file" id="card-file" accept=".txt,.crd,.card,.mac,.for"></label>
+          </div>
+          <p class="msg" id="card-msg" role="status"></p>
+          <div class="card-view">
+            <p class="hint" id="card-caption">Voorbeeld van de kaart op de regel van de cursor</p>
+            <svg id="card-svg" class="punchcard" viewBox="0 0 740 330" role="img" aria-label="Ponskaart"></svg>
+          </div>
+        </div>
+
+        <div class="tab-body" data-tab="io">
+          <h3>Programma laden</h3>
+          <p class="hint">DEC <em>absolute loader</em>-formaat (<code>.lda</code>, <code>.bin</code>, <code>.ptp</code>), zoals de ponsbanden van DEC. Een ander bestand wordt als ruwe bytes geladen op het adres hieronder.</p>
+          <div class="row">
+            <input type="file" id="file-load" accept=".lda,.bin,.ptp,.pap,.abs">
+            <label>Adres voor ruwe bytes <input id="bin-addr" class="oct6" maxlength="6" value="001000" inputmode="numeric"></label>
+          </div>
+          <h3>Geheugen opslaan</h3>
+          <div class="row">
+            <label>Van <input id="save-from" class="oct6" maxlength="6" value="001000" inputmode="numeric"></label>
+            <label>t/m <input id="save-to" class="oct6" maxlength="6" value="001777" inputmode="numeric"></label>
+            <label>start <input id="save-start" class="oct6" maxlength="6" value="001000" inputmode="numeric"></label>
+            <button id="btn-save-lda">Als .lda</button>
+            <button id="btn-save-bin">Als ruwe .bin</button>
+          </div>
+          <h3>Ponsband (PC11)</h3>
+          <p class="hint">Leg een bestand in de <b>ponsbandlezer</b> (<code>177550</code>); een programma leest het teken voor teken. Wat een programma naar de <b>ponser</b> (<code>177554</code>) stuurt, kun je hier downloaden.</p>
+          <div class="row">
+            <label class="file-btn">Band in de lezer&hellip; <input type="file" id="tape-file"></label>
+            <span class="msg" id="tape-state"></span>
+          </div>
+          <div class="row">
+            <span class="msg" id="punch-state"></span>
+            <button id="btn-punch-save">Geponste band opslaan</button>
+            <button id="btn-punch-clear">Afscheuren</button>
+          </div>
+          <p id="io-msg" class="msg" role="status"></p>
+        </div>
+
+        <div class="tab-body" data-tab="set">
+          <div class="settings">
+            <label>Snelheid
+              <select id="speed">
+                <option value="1">echt (11/40)</option>
+                <option value="2">2&times;</option>
+                <option value="10">10&times;</option>
+                <option value="50">50&times; (turbo)</option>
+              </select>
+            </label>
+            <label>Terminal
+              <select id="baud">
+                <option value="90909">110 baud (Teletype ASR-33)</option>
+                <option value="33333">300 baud</option>
+                <option value="8333">1200 baud</option>
+                <option value="1042">9600 baud (VT100)</option>
+                <option value="20">zo snel mogelijk</option>
+              </select>
+            </label>
+            <label>Netfrequentieklok
+              <select id="clock-hz">
+                <option value="50">50 Hz (Europa)</option>
+                <option value="60">60 Hz (Amerika)</option>
+              </select>
+            </label>
+            <div class="row">
+              <button id="btn-poweron" class="danger">Uit- en aanzetten (geheugen wissen)</button>
+            </div>
+            <p id="set-msg" class="msg" role="status"></p>
+          </div>
+        </div>
+
+        <div class="tab-body help" data-tab="help">
+          <h3>Wat is de PDP-11?</h3>
+          <p>De PDP-11 van Digital Equipment Corporation (1970) is een van de invloedrijkste minicomputers ooit. Unix en de taal C zijn erop ontstaan, en zijn nette instructieset met acht registers en adresseermodi die voor elk register werken, was het voorbeeld voor latere processors zoals de 68000 en de VAX. Deze emulator volgt de <b>PDP-11/40</b> (1972) zonder geheugenbeheer: 56 KB geheugen, een frontpaneel met lampjes en schakelaars, een terminal, een klok, ponsband en een ponskaartlezer.</p>
+          <p>Alles is <b>octaal</b>: een 16-bit woord schrijf je als zes cijfers, bijvoorbeeld <code>177570</code>. Het frontpaneel groepeert de schakelaars daarom per drie.</p>
+
+          <h3>Snel beginnen</h3>
+          <ol>
+            <li>Kies in de <em>Assembler</em> een voorbeeld en klik <b>Laden &amp; starten</b>.</li>
+            <li>Of tik in de terminal (als de processor stilstaat) <code>1000G</code> om op adres 1000 te starten.</li>
+            <li>Bij een <code>HALT</code> toont de terminal het adres en een <code>@</code>: je bent weer in de console-ODT.</li>
+          </ol>
+
+          <h3>Het frontpaneel</h3>
+          <table class="keys">
+            <tr><td><b>SWITCH REGISTER</b></td><td>16 schakelaars voor adres of data. Je kunt ook het octale getal intikken. Programma's lezen ze op <code>177570</code>.</td></tr>
+            <tr><td><b>LOAD ADRS</b></td><td>Het getal van de schakelaars wordt het huidige adres (ADDRESS-lampjes).</td></tr>
+            <tr><td><b>EXAM</b></td><td>Toon het woord op dat adres. Nog eens EXAM: het volgende woord.</td></tr>
+            <tr><td><b>DEP</b></td><td>Zet het getal van de schakelaars op dat adres. Nog eens DEP: het volgende adres.</td></tr>
+            <tr><td><b>START</b></td><td>Reset en start op het adres.</td></tr>
+            <tr><td><b>ENABLE/HALT</b></td><td>Op HALT stopt de processor. CONT voert dan steeds <b>één instructie</b> uit.</td></tr>
+            <tr><td><b>CONT</b></td><td>Ga verder waar de processor stopte.</td></tr>
+          </table>
+          <p>Terwijl een programma loopt, tonen de ADDRESS-lampjes de programmateller en de DATA-lampjes het <b>displayregister</b> (een programma schrijft naar <code>177570</code>). De lampjes gloeien zachter naarmate een bit minder vaak aan is, net als echte gloeilampjes.</p>
+          <p>De registers R0–R7 bereik je met het frontpaneel op de adressen <code>177700</code>–<code>177707</code>.</p>
+
+          <h3>Een programma intikken met de schakelaars</h3>
+          <p>Zo ging het echt: woord voor woord met de schakelaars. Dit programma telt op de DATA-lampjes:</p>
+          <pre class="mono">001000  005000         CLR  R0
+001002  005200         INC  R0
+001004  010037 177570  MOV  R0,@#177570
+001010  013701 177570  MOV  @#177570,R1   ; wachttijd = schakelaars
+001014  077101         SOB  R1,001014
+001016  000771         BR   001002</pre>
+          <ol>
+            <li>Zet de schakelaars op <code>001000</code> en druk <b>LOAD ADRS</b>.</li>
+            <li>Zet <code>005000</code> en druk <b>DEP</b>. Daarna <code>005200</code> en <b>DEP</b>, enzovoort tot en met <code>000771</code>.</li>
+            <li>Zet <code>001000</code>, druk <b>LOAD ADRS</b> en <b>START</b>.</li>
+            <li>Met de schakelaars regel je nu de snelheid: alles uit (0) is het traagst.</li>
+          </ol>
+
+          <h3>Console-ODT in de terminal</h3>
+          <p>Staat de processor stil, dan reageert de terminal zoals de ODT van de latere PDP-11's (in de microcode van de 11/23 en 11/73):</p>
+          <table class="keys">
+            <tr><td><code>1000/</code></td><td>Open het woord op adres 1000; de inhoud verschijnt. Tik een nieuw octaal getal of laat het zo.</td></tr>
+            <tr><td><kbd>Enter</kbd></td><td>Sla op (als je iets tikte) en sluit.</td></tr>
+            <tr><td><kbd>LF</kbd></td><td>Sla op en open het volgende woord (knop LF, <kbd>Shift</kbd>+<kbd>Enter</kbd> of <kbd>Ctrl</kbd>+<kbd>J</kbd>).</td></tr>
+            <tr><td><code>^</code></td><td>Open het vorige woord.</td></tr>
+            <tr><td><code>@</code></td><td>Open het woord waar de inhoud naar wijst.</td></tr>
+            <tr><td><code>R3/</code>, <code>RS/</code></td><td>Open register R3, of het PSW.</td></tr>
+            <tr><td><code>1000G</code></td><td>Reset en start op adres 1000.</td></tr>
+            <tr><td><code>P</code></td><td>Ga verder (proceed) na een HALT.</td></tr>
+          </table>
+
+          <h3>Registers en adresseermodi</h3>
+          <p>Acht registers van 16 bit: R0–R5 voor algemeen gebruik, R6 = <b>SP</b> (stack) en R7 = <b>PC</b> (programmateller). Omdat de PC een gewoon register is, zijn constanten en absolute adressen gewoon adresseermodi met R7.</p>
+          <table class="keys">
+            <tr><th>Notatie</th><th>Modus</th><th>Betekenis</th></tr>
+            <tr><td><code>R1</code></td><td>0</td><td>het register zelf</td></tr>
+            <tr><td><code>(R1)</code></td><td>1</td><td>het woord waar R1 naar wijst</td></tr>
+            <tr><td><code>(R1)+</code></td><td>2</td><td>idem, daarna R1 + 2 (bij bytes + 1)</td></tr>
+            <tr><td><code>@(R1)+</code></td><td>3</td><td>(R1) bevat het adres; daarna R1 + 2</td></tr>
+            <tr><td><code>-(R1)</code></td><td>4</td><td>eerst R1 - 2, dan het woord waar R1 naar wijst</td></tr>
+            <tr><td><code>@-(R1)</code></td><td>5</td><td>eerst R1 - 2; daar staat het adres</td></tr>
+            <tr><td><code>X(R1)</code></td><td>6</td><td>het woord op R1 + X</td></tr>
+            <tr><td><code>@X(R1)</code></td><td>7</td><td>op R1 + X staat het adres</td></tr>
+            <tr><td><code>#100</code></td><td>2 met PC</td><td>de constante 100</td></tr>
+            <tr><td><code>@#177570</code></td><td>3 met PC</td><td>absoluut adres</td></tr>
+            <tr><td><code>LABEL</code></td><td>6 met PC</td><td>relatief adres (verplaatsbare code)</td></tr>
+          </table>
+          <p>Vlaggen in het PSW (<code>177776</code>): N (negatief), Z (nul), V (overloop), C (carry), T (trace) en de prioriteit (bits 5–7). Een interrupt komt alleen door als het apparaat een hogere prioriteit heeft dan de processor.</p>
+
+          <h3>Apparaten</h3>
+          <table class="keys">
+            <tr><th>Adres</th><th>Apparaat</th><th>Vector</th></tr>
+            <tr><td><code>177560</code>/<code>562</code></td><td>Toetsenbord: status (bit 7 = teken klaar, bit 6 = interrupt aan) en teken</td><td><code>060</code>, BR4</td></tr>
+            <tr><td><code>177564</code>/<code>566</code></td><td>Terminal-uitvoer: status (bit 7 = klaar) en teken</td><td><code>064</code>, BR4</td></tr>
+            <tr><td><code>177546</code></td><td>KW11-L netfrequentieklok (bit 7 bij elke tik, bit 6 = interrupt aan)</td><td><code>100</code>, BR6</td></tr>
+            <tr><td><code>177550</code>/<code>552</code></td><td>Ponsbandlezer: bit 0 = lees een teken, bit 7 = klaar, bit 15 = geen band</td><td><code>070</code>, BR4</td></tr>
+            <tr><td><code>177554</code>/<code>556</code></td><td>Ponser: bit 7 = klaar</td><td><code>074</code>, BR4</td></tr>
+            <tr><td><code>177160</code></td><td>CR11-kaartlezer, status: bit 0 = READ, 6 = interrupt aan, 7 = kolom klaar, 13 = bak leeg, 14 = kaart klaar, 15 = fout</td><td><code>230</code>, BR6</td></tr>
+            <tr><td><code>177162</code></td><td>Kolom als 12-bit Hollerith-patroon (bit 11 = rij 12 &hellip; bit 0 = rij 9)</td><td></td></tr>
+            <tr><td><code>177164</code></td><td>Kolom in gecomprimeerde 8-bit code</td><td></td></tr>
+            <tr><td><code>177570</code></td><td>Schakelaars (lezen) en displayregister (schrijven)</td><td></td></tr>
+            <tr><td><code>177776</code></td><td>PSW</td><td></td></tr>
+          </table>
+          <p>Traps: <code>004</code> busfout (oneven adres of niets op dat adres), <code>010</code> ongeldige instructie, <code>014</code> BPT/trace, <code>020</code> IOT, <code>030</code> EMT, <code>034</code> TRAP. Bij een trap of interrupt gaan PSW en PC op de stack; de vector levert de nieuwe PC en PSW, en <code>RTI</code> keert terug.</p>
+
+          <h3>Ponskaarten</h3>
+          <p>Een kaart heeft 80 kolommen en 12 rijen (12, 11, 0, 1 … 9). Een cijfer is één gaatje in zijn eigen rij; een letter is een combinatie van een <em>zone</em> (12, 11 of 0) en een cijferrij: A = 12-1, J = 11-1, S = 0-2. Leestekens krijgen ook een gaatje in rij 8. De kaartlezer leest 1200 kaarten per minuut; per kolom heeft het programma ongeveer een halve milliseconde. Leest het een kolom niet op tijd, dan zet de lezer een <em>timing error</em> (bits 11 en 15).</p>
+          <p>Kaartlezers hoorden vooral bij grote rekencentra. Een PDP-11 kreeg meestal een Teletype met ponsband; de CR11 was een uitbreiding voor wie programma's of gegevens op kaarten had.</p>
+
+          <h3>De assembler (MACRO-11)</h3>
+          <ul>
+            <li>Getallen zijn octaal. Decimaal schrijf je met een punt: <code>100.</code>; verder <code>^B101</code>, <code>^D99</code>, <code>'A</code> (één teken) en <code>"AB</code> (twee tekens).</li>
+            <li>Labels met een dubbele punt (<code>LUS:</code>), lokale labels <code>1$:</code> tot het volgende gewone label, constanten met <code>NAAM = 177570</code>, het adres zetten met <code>. = 1000</code>.</li>
+            <li>Rekenen gebeurt van links naar rechts, zonder voorrang: <code>&lt;A+B&gt;*2</code>. Operatoren <code>+ - * / &amp; !</code> (of) en <code>^C</code> (complement).</li>
+            <li>Directives: <code>.WORD</code>, <code>.BYTE</code>, <code>.ASCII /tekst/</code>, <code>.ASCIZ</code> (met een 0 erachter, ook <code>&lt;15&gt;&lt;12&gt;</code> voor CR LF), <code>.EVEN</code>, <code>.BLKW</code>, <code>.BLKB</code>, <code>.RADIX 10</code>, <code>.END START</code>.</li>
+          </ul>
+
+          <h3>Wat ontbreekt</h3>
+          <p>Geen geheugenbeheer (MMU), geen floating point (FIS) en geen schijven; daardoor draait Unix er niet op. Het frontpaneel gebruikt 16 in plaats van 18 adresbits. De console-ODT zat op de echte 11/40 niet in de processor; hier is hij toegevoegd omdat de terminal dan meteen bruikbaar is.</p>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <script type="module" src="js/pdp11-app.js"></script>
+</body>
+</html>

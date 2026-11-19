@@ -1,12 +1,14 @@
-# KIM-1 en Junior Computer emulator
+# KIM-1, Junior Computer en PDP-11 emulator
 
-Twee emulators van 6502-eenbordscomputers, die in de browser draaien zonder
+Drie emulators van klassieke computers, die in de browser draaien zonder
 installatie, build-stap of afhankelijkheden:
 
 - **MOS KIM-1** (1976), de computer waarmee MOS Technology de 6502 introduceerde
   (`index.html`);
 - **Elektor/Elektuur Junior Computer** (1980), het bouwproject dat sterk op de
-  KIM-1 lijkt (`junior.html`).
+  KIM-1 lijkt (`junior.html`);
+- **DEC PDP-11/40** (1972), de minicomputer waarop Unix en C ontstonden, met
+  frontpaneel, terminal, ponsband en ponskaartlezer (`pdp11.html`).
 
 ![KIM-1: zes LED-cijfers, een hexadecimaal keypad en de SST-schakelaar](docs/screenshot.png)
 
@@ -55,6 +57,29 @@ python3 -m http.server 8000
   (`JUNIOR_ROM=/pad/naar/monitor.bin npm test`): monitor, editor, assembler,
   sprongberekening en `SCANDS` gedragen zich identiek.
 
+## PDP-11
+
+![PDP-11/40: frontpaneel met lampjes en schakelaars, terminal en assembler](docs/pdp11.png)
+
+- **CPU**: PDP-11/40 zonder MMU: de volledige basisinstructieset, EIS (`MUL`, `DIV`,
+  `ASH`, `ASHC`), `XOR`, `SOB`, `SXT`, `MARK`, `RTT`, traps (busfout, ongeldige
+  instructie, `BPT`, `IOT`, `EMT`, `TRAP`, trace-bit) en vectored interrupts met
+  prioriteiten. 56 KB geheugen; de I/O-pagina ligt op `160000–177777`.
+- **Frontpaneel**: ADDRESS- en DATA-lampjes (die net als gloeilampjes zachter gloeien
+  als een bit maar een deel van de tijd aan is), 16 schakelaars en LOAD ADRS, EXAM,
+  DEP, START, CONT en ENABLE/HALT. Programma's lezen de schakelaars en schrijven het
+  displayregister op `177570`. Je kunt programma's echt woord voor woord intikken.
+- **Terminal** (DL11, instelbaar van 110 tot 9600 baud) met een **console-ODT** zoals
+  in de latere PDP-11's: `1000/` toont een woord, `1000G` start.
+- **Apparaten**: KW11-L netfrequentieklok (50/60 Hz), PC11 ponsbandlezer en -ponser, en
+  een **CR11-ponskaartlezer**: elke regel tekst wordt een kaart van 80 kolommen in
+  DEC 029-code, met een tekening van de gaatjes.
+- **MACRO-11-assembler** (octaal, lokale labels, alle adresseermodi, `.ASCIZ` enz.)
+  met listing, een disassembler, debugger met breekpunt, en laden/opslaan in het
+  DEC *absolute loader*-formaat.
+- Voorbeelden: hallo wereld, looplicht, typmachine met interrupts, klok, priemgetallen
+  met `MUL`/`DIV`, systeemaanroepen met `TRAP` en het lezen van ponskaarten.
+
 De Junior bestaat ook als desktop-app voor Windows en macOS: zie
 [`desktop/README.md`](desktop/README.md).
 
@@ -91,3 +116,9 @@ KLAUS_BIN=/pad/naar/6502_functional_test.bin npm test
 | `js/assembler.js`, `js/disasm.js` | assembler en disassembler |
 | `js/fileformats.js` | papertape en Intel HEX |
 | `js/samples.js`, `js/samples-junior.js` | voorbeeldprogramma's |
+| `js/pdp11-cpu.js` | PDP-11-processor |
+| `js/pdp11.js` | PDP-11-systeem: bus, apparaten, frontpaneel, console-ODT |
+| `js/pdp11-cards.js` | ponskaarten (Hollerith, DEC 029) |
+| `js/pdp11-asm.js`, `js/pdp11-disasm.js` | MACRO-11-assembler, instructietabel en disassembler |
+| `js/pdp11-files.js` | absolute-loaderformaat |
+| `js/pdp11-app.js`, `js/pdp11-samples.js` | gebruikersinterface en voorbeelden van `pdp11.html` |
