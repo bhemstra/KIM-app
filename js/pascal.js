@@ -1025,6 +1025,9 @@ const BUILTIN_FUNCS = { ord: 1, chr: 1, odd: 1, abs: 1, sqr: 1, succ: 1, pred: 1
 const RUNTIME = `; ========== Runtime-bibliotheek ==========
 
 R.EXIT:	JSR	PC,R.CRLF
+	MOV	#R.SKLA,R0
+	CLR	R1
+	JSR	PC,R.WSTR	; "Programma klaar."
 R.STOP:	TSTB	@#177564	; wacht tot het laatste teken verstuurd is
 	BPL	R.STOP
 	HALT			; programma klaar
@@ -1223,6 +1226,7 @@ R.M6:	.ASCIZ	/chr: getal niet tussen 0 en 127/
 R.MBUS:	.ASCIZ	/interne fout (busfout of ongeldige instructie)/
 R.SFOU:	.ASCIZ	/*** fout op regel /
 R.SDUB:	.ASCIZ	/: /
+R.SKLA:	.ASCIZ	/Programma klaar./
 R.STRU:	.ASCIZ	/TRUE/
 R.SFAL:	.ASCIZ	/FALSE/`;
 

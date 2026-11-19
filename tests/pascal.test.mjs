@@ -18,7 +18,7 @@ function run(src, input = '', us = 5e6) {
   for (const ch of input) m.typeKey(ch);
   m.run(us);
   assert.equal(m.cpu.halted, true, 'programma moet klaar zijn');
-  return out.replace(/\r\n\d{6}\r\n@$/, '').replace(/\r\n/g, '\n');
+  return out.replace(/\r\n\d{6}\r\n@$/, '').replace(/Programma klaar\.$/, '').replace(/\r\n/g, '\n');
 }
 
 const body = (s, decl = 'var i, j, k: integer; b: boolean; c: char;') => `program t; ${decl} begin ${s} end.`;
@@ -132,6 +132,18 @@ test('compileerfouten zijn begrijpelijk en hebben een regelnummer', () => {
   fails('program x; procedure p(var a: integer); begin end; begin p(3) end.', /var-parameter/);
   fails('program x; { nooit dicht\nbegin end.', /commentaar/);
   fails('program x; procedure a; procedure b; begin end; begin end; begin end.', /procedure binnen een procedure/);
+});
+
+test('na afloop meldt het programma dat het klaar is', () => {
+  const r = assemble(compilePascal("program x;\nbegin\n  writeln('hoi')\nend."));
+  const m = new PDP11();
+  let out = '';
+  m.onTTYOutput = (s) => { out += s; };
+  for (const s of r.segments) s.bytes.forEach((b, i) => m.poke(s.start + i, b));
+  out = '';
+  m.go(r.start);
+  m.run(1e6);
+  assert.match(out, /^hoi\r\n\r\nProgramma klaar\.\r\n\d{6}\r\n@$/);
 });
 
 test('de gegenereerde code bevat de Pascal-regels als commentaar', () => {
