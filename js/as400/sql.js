@@ -262,9 +262,20 @@ class Parser {
     }
     this.op('(');
     const cols = [];
+    let keys = [];
     do {
-      if (this.isKw('PRIMARY') || this.isKw('CONSTRAINT') || this.isKw('UNIQUE')) {
-        // Beperkingen worden geaccepteerd maar niet afgedwongen
+      if (this.isKw('CONSTRAINT') && this.isKw('PRIMARY', 2)) { this.p += 2; }
+      if (this.isKw('PRIMARY')) {
+        this.p++;
+        this.kw('KEY');
+        this.op('(');
+        keys = [];
+        do keys.push(this.ident()); while (this.acceptOp(','));
+        this.op(')');
+        continue;
+      }
+      if (this.isKw('CONSTRAINT') || this.isKw('UNIQUE')) {
+        // Andere beperkingen worden geaccepteerd maar niet afgedwongen
         let depth = 0;
         while (this.peek() && !(depth === 0 && (this.isOp(',') || this.isOp(')')))) {
           if (this.isOp('(')) depth++;
@@ -279,12 +290,17 @@ class Parser {
         if (this.acceptKw('NOT')) { this.kw('NULL'); cols.at(-1).notnull = true; continue; }
         if (this.acceptKw('NULL')) continue;
         if (this.acceptKw('DEFAULT')) { cols.at(-1).dft = this.primary(); continue; }
-        if (this.acceptKw('PRIMARY')) { this.kw('KEY'); cols.at(-1).notnull = true; continue; }
+        if (this.acceptKw('PRIMARY')) { this.kw('KEY'); cols.at(-1).notnull = true; keys = [cols.at(-1).name]; continue; }
         break;
       }
     } while (this.acceptOp(','));
     this.op(')');
-    return { type: 'create', table, cols };
+    for (const k of keys) {
+      const c = cols.find((x) => x.name === k);
+      if (!c) throw sqlErr('SQL0205', `Column ${k} not in table ${table.name}.`);
+      c.notnull = true;
+    }
+    return { type: 'create', table, cols, keys };
   }
 
   dataType() {
@@ -867,6 +883,18 @@ export class SqlEngine {
     }
   }
 
+  // Een primaire sleutel moet uniek zijn
+  checkKeys(obj, rows) {
+    const idx = (obj.keys || []).map((k) => obj.fields.findIndex((f) => f.name === k)).filter((i) => i >= 0);
+    if (!idx.length) return;
+    const seen = new Set();
+    for (const r of rows) {
+      const k = JSON.stringify(idx.map((i) => (typeof r[i] === 'string' ? r[i].trimEnd() : r[i])));
+      if (seen.has(k)) throw sqlErr('SQL0803', `Duplicate key value specified (key ${obj.keys.join(', ')} of ${obj.name}).`);
+      seen.add(k);
+    }
+  }
+
   insert(st) {
     const { obj, lib } = this.env.getTable(st.table.schema, st.table.name);
     const fields = obj.fields;
@@ -882,6 +910,7 @@ export class SqlEngine {
       cols.forEach((ci, k) => { row[ci] = vals[k]; });
       return row.map((v, i) => this.coerce(fields[i], v));
     });
+    this.checkKeys(obj, [...obj.rows, ...newRows]);
     obj.rows.push(...newRows);
     this.env.changed?.();
     const n = newRows.length;
@@ -906,6 +935,7 @@ export class SqlEngine {
       return copy;
     });
     if (!n) return { type: 'count', count: 0, message: 'Row not found for UPDATE.', warn: 'SQL0100' };
+    this.checkKeys(obj, updated);
     obj.rows.splice(0, obj.rows.length, ...updated);
     this.env.changed?.();
     return { type: 'count', count: n, message: `${n} row${n === 1 ? '' : 's'} updated in ${obj.name} in ${lib}.` };
@@ -936,7 +966,7 @@ export class SqlEngine {
         names.add(f.name);
       }
     }
-    const lib = this.env.createTable(st.table.schema, st.table.name, fields, rows);
+    const lib = this.env.createTable(st.table.schema, st.table.name, fields, rows, st.keys || []);
     return { type: 'ddl', message: `Table ${st.table.name} created in ${lib}.` };
   }
 }

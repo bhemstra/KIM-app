@@ -733,7 +733,11 @@ export class InquiryPanel extends Panel {
     let r = 2;
     for (const l of wrap(`Job ${s.sys.jobId(j)} started on ${s.sys.fmtDate(started)} at ${s.sys.fmtTime(started)} in subsystem QINTER in QSYS.`, 78)) scr.text(r++, 1, l);
     r++;
-    for (const l of wrap(this.text, 76)) scr.text(r++, 1, l, 'w');
+    // Veel DSPLY-regels: alleen de laatste passen op het scherm
+    let lines = wrap(this.text, 76);
+    const room = (this.opts.reply ? 17 : 19) - r;
+    if (lines.length > room) lines = ['...', ...lines.slice(-(room - 1))];
+    for (const l of lines) scr.text(r++, 1, l, 'w');
     r++;
     if (this.opts.reply) {
       scr.text(r++, 1, 'Type reply, press Enter.');

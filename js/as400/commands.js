@@ -10,6 +10,7 @@ import {
   DspMsgPanel, ChgPwdPanel, LibListPanel, ObjListPanel, MbrListPanel, WrkCmdPanel, SqlPanel,
 } from './work.js';
 import { SeuPanel } from './seu.js';
+import { compileRPG, runRPG } from './rpg.js';
 
 // ---------- Definities ----------
 
@@ -124,12 +125,12 @@ export function sqlRun(s, text) {
       if (!r || r.obj.src) throw new CpfError('SQL0204', `${name} in ${schema || '*LIBL'} type *FILE not found.`);
       return r;
     },
-    createTable(schema, name, fields, rows) {
+    createTable(schema, name, fields, rows, keys = []) {
       if (!isName(name) || name.includes('.')) throw new CpfError('SQL0107', `${name} too long or not valid. Maximum length is 10 for a system name.`);
       const lib = sys.targetLib(schema || '*CURLIB', job);
       try { sys.lib(lib, job); } catch { throw new CpfError('SQL0204', `${lib} in *LIBL type *LIB not found.`); }
       if (sys.lib(lib, job).objs[objKey(name, '*FILE')]) throw new CpfError('SQL0601', `${name} in ${lib} type *FILE already exists.`);
-      sys.putObj(lib, newDataFile(name, fields, '', rows), job);
+      sys.putObj(lib, newDataFile(name, fields, '', rows, keys), job);
       return lib;
     },
     dropTable(schema, name) {
@@ -152,7 +153,53 @@ export function sqlRun(s, text) {
 
 export const SIGNOFF = { signoff: true };
 
+// Bestanden zoals een programma ze ziet: via de bibliotheeklijst van de job
+function fileLookup(s) {
+  return (name) => {
+    const r = s.sys.findObj({ lib: '*LIBL', obj: name }, '*FILE', s.job);
+    return r ? r.obj : null;
+  };
+}
+
+function rpgGen(s, obj, args) {
+  const { prog, errors } = compileRPG(obj.source || [], { fileInfo: fileLookup(s) });
+  if (errors.length) throw new CpfError('RNX9998', `Program ${obj.name} cannot run: ${errors[0].text} Compile it again.`);
+  const pad2 = (n) => String(n).padStart(2, '0');
+  const env = {
+    name: obj.name,
+    get batch() { return s.job.type === 'BCH'; },
+    openFile(name) {
+      const r = s.sys.findObj({ lib: '*LIBL', obj: name }, '*FILE', s.job);
+      return r && !r.obj.src ? r : null;
+    },
+    spool(file, lines, userData) { s.sys.addSpool(s.job, file, lines, userData); },
+    today() {
+      const d = s.sys.now();
+      return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
+    },
+    timestamp() {
+      const d = s.sys.now();
+      return `${env.today()}-${pad2(d.getHours())}.${pad2(d.getMinutes())}.${pad2(d.getSeconds())}.000000`;
+    },
+    exec(text) {
+      s.job.log.push({ kind: 'cmd', text });
+      const r = execCommand(s, text, { inProgram: true, batch: s.job.type === 'BCH' });
+      if (r?.signoff) throw SIGNOFF;
+      for (const m of r?.msgs || []) s.job.log.push({ kind: 'msg', text: m.text, id: m.id });
+      return r;
+    },
+    *call(q, a) {
+      const { obj: o } = getProgram(s, q);
+      return yield* programGen(s, o, a);
+    },
+    seq: (line) => obj.seqs?.[line] || String(line + 1),
+    joblog: (e) => s.job.log.push({ kind: 'msg', text: e.text, id: e.id }),
+  };
+  return runRPG(prog, args, env);
+}
+
 export function programGen(s, obj, args) {
+  if (obj.attr === 'RPGLE') return rpgGen(s, obj, args);
   const compiled = compileCL(obj.source || [], knownCommand);
   if (compiled.errors.length) throw new CpfError('CPF0C33', `Program ${obj.name} has errors; compile it again.`);
   const env = {
@@ -301,8 +348,12 @@ def('CALL', 'Call Program', [
     if (ctx.batch) throw new CpfError('CPF0001', 'QCMD cannot be called in a batch job.');
     return { panel: new CmdEntryPanel() };
   }
-  const { obj } = getProgram(ctx.s, a.PGM);
   const args = a.PARM ? splitTop(a.PARM).map(argValue) : [];
+  if (a.PGM.obj === 'QCMDEXC') {
+    // De opdracht uit de eerste parameter uitvoeren (de lengte wordt genegeerd)
+    return execCommand(ctx.s, String(args[0] ?? '').trim(), { inProgram: ctx.inProgram, batch: ctx.batch });
+  }
+  const { obj } = getProgram(ctx.s, a.PGM);
   return { program: programGen(ctx.s, obj, args), programName: obj.name };
 });
 
@@ -825,6 +876,8 @@ def('DSPFD', 'Display File Description', [Q('FILE', 'File', { req: true }), OUTP
     `  Maximum number of members . . . . . . . . :   MAXMBRS     ${f.src ? '*NOMAX' : 1}`,
     `  Current number of members . . . . . . . . :               ${n}`,
     `  Total number of records . . . . . . . . . :               ${recs}`,
+    `  Access path . . . . . . . . . . . . . . . :               ${f.keys?.length ? 'Keyed' : 'Arrival'}`,
+    ...(f.keys?.length ? [`  Key field(s)  . . . . . . . . . . . . . . :               ${f.keys.join(', ')}`, `  Unique key values required  . . . . . . . :               Yes`] : []),
   ], 'QPDSPFD');
 });
 
@@ -935,14 +988,15 @@ def('STRSEU', 'Start Source Entry Utility', [
   let isNew = false;
   if (!m) {
     if (a.OPTION === 5) throw new CpfError('EDT0221', `Member ${a.SRCMBR} not found in file ${f.name}.`);
-    const type = a.TYPE === '*SAME' ? (f.name === 'QCLSRC' ? 'CLP' : 'TXT') : a.TYPE;
+    const type = a.TYPE === '*SAME' ? ({ QCLSRC: 'CLP', QRPGLESRC: 'RPGLE', QSQLSRC: 'SQL' }[f.name] || 'TXT') : a.TYPE;
     m = newMember(type, a.TEXT === '*BLANK' ? '' : a.TEXT);
     isNew = true;
   } else if (a.TYPE !== '*SAME') m.type = a.TYPE;
   return { panel: new SeuPanel({ lib, file: f.name, mbr: a.SRCMBR, member: m, edit: a.OPTION === 2, isNew, srcFile: f }) };
 });
 
-function compileCmd(attr, srcType) {
+function compileCmd(attr) {
+  const rpg = attr === 'RPGLE';
   return (ctx, a) => {
     const sys = ctx.sys;
     const { obj: f, lib: srcLib } = fileOf(ctx, a.SRCFILE, 'src');
@@ -950,11 +1004,12 @@ function compileCmd(attr, srcType) {
     const { m } = memberOf(f, srcLib, mbrName);
     const lib = sys.targetLib(a.PGM.lib, ctx.job);
     sys.lib(lib, ctx.job);
-    const res = compileCL(m.lines, knownCommand);
+    const res = rpg ? compileRPG(m.lines, { fileInfo: fileLookup(ctx.s) }) : compileCL(m.lines, knownCommand);
     const name = a.PGM.obj;
     // Compileerlijst
+    const title = rpg ? 'ILE RPG Compiler' : `${attr === 'CLLE' ? 'ILE ' : ''}Control Language`;
     const listing = [
-      `  ${attr === 'CLLE' ? 'ILE ' : ''}Control Language                    ${lib}/${name}        ${sys.name}  ${sys.fmtDate()} ${sys.fmtTime()}`,
+      `  ${title.padEnd(36)}${lib}/${name}        ${sys.name}  ${sys.fmtDate()} ${sys.fmtTime()}`,
       `Program . . . . . . . . . . . . . . . . . . :   ${name}`,
       `  Library . . . . . . . . . . . . . . . . . :     ${lib}`,
       `Source file . . . . . . . . . . . . . . . . :   ${f.name}`,
@@ -962,7 +1017,7 @@ function compileCmd(attr, srcType) {
       `Source member name  . . . . . . . . . . . . :   ${mbrName}`,
       `Source type . . . . . . . . . . . . . . . . :   ${m.type}`,
       '',
-      '                           Control Language Source',
+      `                           ${rpg ? 'Source Listing' : 'Control Language Source'}`,
       'SEQNBR  *...+... 1 ...+... 2 ...+... 3 ...+... 4 ...+... 5 ...+... 6 ...+... 7',
     ];
     const byLine = new Map();
@@ -982,6 +1037,7 @@ function compileCmd(attr, srcType) {
       sys.addSpool(ctx.job, name, listing, name);
       const first = res.errors[0];
       ctx.job.log.push({ kind: 'msg', text: `${first.id}: ${first.text} (statement ${m.lines[first.line]?.seq || ''})`, id: first.id });
+      if (rpg) throw new CpfError('RNS9310', `Compilation stopped. Severity 30 errors found in program ${name}. See spooled file ${name}.`);
       throw new CpfError('CPF0C33', `Program ${name} not created in library ${lib}. See spooled file ${name} for errors.`);
     }
     listing.push(`Program ${name} created in library ${lib}.`);
@@ -990,7 +1046,8 @@ function compileCmd(attr, srcType) {
     const key = objKey(name, '*PGM');
     if (l.objs[key] && a.REPLACE === '*NO') throw new CpfError('CPF0C32', `Program ${name} in library ${lib} already exists.`);
     const text = a.TEXT === '*SRCMBRTXT' ? m.text : a.TEXT;
-    l.objs[key] = newObject(name, '*PGM', attr, text, { owner: ctx.job.user, source: m.lines.map((x) => x.data), srcFile: `${srcLib}/${f.name}`, srcMbr: mbrName });
+    l.objs[key] = newObject(name, '*PGM', attr, text, { owner: ctx.job.user, source: m.lines.map((x) => x.data), seqs: m.lines.map((x) => x.seq), srcFile: `${srcLib}/${f.name}`, srcMbr: mbrName });
+    if (rpg) return ok(`Program ${name} placed in library ${lib}. 00 highest severity. Created on ${sys.fmtDate()} at ${sys.fmtTime()}.`, 'RNS9304');
     return ok(`Program ${name} created in library ${lib}.`, 'CPC0904');
   };
 }
@@ -1002,8 +1059,22 @@ const crtParams = [
   C('TEXT', "Text 'description'", 50, { dft: '*SRCMBRTXT', vals: ['*SRCMBRTXT', '*BLANK'] }),
   P('REPLACE', 'Replace program', 4, { dft: '*YES', vals: ['*YES', '*NO'] }),
 ];
-def('CRTCLPGM', 'Create CL Program', crtParams, compileCmd('CLP', 'CLP'));
-def('CRTBNDCL', 'Create Bound CL Program', crtParams, compileCmd('CLLE', 'CLLE'));
+def('CRTCLPGM', 'Create CL Program', crtParams, compileCmd('CLP'));
+def('CRTBNDCL', 'Create Bound CL Program', crtParams, compileCmd('CLLE'));
+def('CRTBNDRPG', 'Create Bound RPG Program', [
+  Q('PGM', 'Program', { dft: '*CTLSPEC', dftLib: '*CURLIB', vals: ['*CTLSPEC'] }),
+  Q('SRCFILE', 'Source file', { dft: 'QRPGLESRC' }),
+  P('SRCMBR', 'Source member', 10, { dft: '*PGM', vals: ['*PGM'] }),
+  C('TEXT', "Text 'description'", 50, { dft: '*SRCMBRTXT', vals: ['*SRCMBRTXT', '*BLANK'] }),
+  P('DFTACTGRP', 'Default activation group', 4, { dft: '*YES', vals: ['*YES', '*NO'] }),
+  P('REPLACE', 'Replace program', 4, { dft: '*YES', vals: ['*YES', '*NO'] }),
+], (ctx, a) => {
+  if (a.PGM.obj === '*CTLSPEC') {
+    if (a.SRCMBR === '*PGM') throw new CpfError('RNS9301', 'Specify a program name (PGM) or a source member (SRCMBR).');
+    a.PGM = { lib: a.PGM.lib, obj: a.SRCMBR };
+  }
+  return compileCmd('RPGLE')(ctx, a);
+}, { pos: 2 });
 
 def('STRSQL', 'Start SQL Interactive Session', [
   P('NAMING', 'Naming convention', 4, { dft: '*SYS', vals: ['*SYS', '*SQL'] }),

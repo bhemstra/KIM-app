@@ -1,7 +1,7 @@
 // Het systeem: schijfinhoud (state), bibliotheeklijst, objecten zoeken,
 // spoolbestanden, berichten en de (gesimuleerde) actieve jobs.
 import { CpfError } from './cl.js';
-import { factoryState, objKey, VIRTUAL_LIBS, SYSTEM_NAME, newObject } from './db.js';
+import { factoryState, objKey, VIRTUAL_LIBS, SYSTEM_NAME, newObject, upgradeState } from './db.js';
 
 const pad = (n, w = 2) => String(n).padStart(w, '0');
 
@@ -19,7 +19,7 @@ const BACKGROUND = [
 
 export class System {
   constructor(state, opts = {}) {
-    this.state = state || factoryState();
+    this.state = state ? upgradeState(state) : factoryState();
     this.saveFn = opts.save || null;
     this.commands = opts.commands || {};
     this.clock = opts.clock || (() => new Date());
@@ -117,7 +117,7 @@ export class System {
         const lib = l in VIRTUAL_LIBS ? { text: VIRTUAL_LIBS[l], type: '*PROD' } : this.state.libs[l];
         add({ name: l, type: '*LIB', attr: lib.type === '*TEST' ? 'TEST' : 'PROD', text: lib.text, owner: 'QSYS', created: lib.created || '1994-06-01T00:00:00Z', system: true });
       }
-      for (const [name, text] of [['QCMD', 'Command entry'], ['QSTRUP', 'Startup program'], ['QEZSCNEP', 'Job scheduler']]) {
+      for (const [name, text] of [['QCMD', 'Command entry'], ['QCMDEXC', 'Execute command'], ['QSTRUP', 'Startup program'], ['QEZSCNEP', 'Job scheduler']]) {
         add({ name, type: '*PGM', attr: 'CLP', text, owner: 'QSYS', created: '1994-06-01T00:00:00Z', system: true });
       }
       for (const u of Object.keys(this.state.users)) {

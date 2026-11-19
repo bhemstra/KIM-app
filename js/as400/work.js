@@ -642,7 +642,7 @@ export class MbrListPanel extends ListPanel {
         s.msg(`Member ${name} printed to spooled file ${this.file}.`);
       },
       14: ({ name, m }) => {
-        const cmd = m.type === 'CLP' ? 'CRTCLPGM' : m.type === 'CLLE' ? 'CRTBNDCL' : null;
+        const cmd = { CLP: 'CRTCLPGM', CLLE: 'CRTBNDCL', RPGLE: 'CRTBNDRPG' }[m.type] || null;
         if (!cmd) throw new CpfError('PDM0003', `Option 14 not valid for member type ${m.type}.`);
         s.run(`${cmd} PGM(${this.lib}/${name}) SRCFILE(${q}) SRCMBR(${name})`, { quiet: true });
       },

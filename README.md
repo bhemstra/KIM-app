@@ -82,7 +82,7 @@ geen IBM-code in. Meld je aan als `QSECOFR`/`QSECOFR` of `GAST`/`GAST`.
   telefoons. Teksten als `F3=Exit` zijn aanklikbaar.
 - **Menu's** (MAIN, USER, SYSTEM, DATA, PROGRAM, PDM) en **Command Entry**
   (`CALL QCMD`).
-- **58 systeemopdrachten** met de **prompter** (F4) en controle van parameters,
+- **59 systeemopdrachten** met de **prompter** (F4) en controle van parameters,
   onder meer `WRKACTJOB`, `WRKSYSSTS`, `WRKJOB`, `DSPJOBLOG`, `WRKSPLF`,
   `SNDMSG`/`DSPMSG`, `CRTLIB`/`DLTLIB`, `ADDLIBLE`, `WRKOBJ`, `DSPOBJD`,
   `CRTPF`, `CRTSRCPF`, `DSPPFM`, `DSPFD`, `DSPFFD`, `CPYF`, `RUNQRY`,
@@ -96,12 +96,25 @@ geen IBM-code in. Meld je aan als `QSECOFR`/`QSECOFR` of `GAST`/`GAST`.
   `ITERATE`, `SELECT`/`WHEN`/`OTHERWISE`, `GOTO`, `MONMSG` (ook `EXEC(DO)` en
   programmabreed), `SNDPGMMSG`, `SNDUSRMSG` (wacht op een antwoord), `RTVJOBA`,
   `RTVSYSVAL`, `CALL` met parameters en ingebouwde functies als `%SST` en `%TRIM`.
+- **RPG**: free-form RPG IV (`**FREE`) met `CRTBNDRPG` of optie 14 in PDM:
+  `dcl-s`, `dcl-c`, `dcl-ds`, arrays (`dim`), `dcl-f` met `keyed` en `usage`,
+  `READ`/`READP`/`READE`, `CHAIN`, `SETLL`/`SETGT`, `WRITE`, `UPDATE`, `DELETE`,
+  printerbestanden naar de spool, `dcl-proc` met parameters (`const`, `value`,
+  of teruggeschreven), `dcl-pr … extpgm` (ook `QCMDEXC`), `BEGSR`/`EXSR`,
+  `IF`/`DOW`/`DOU`/`FOR`/`SELECT`, `MONITOR`/`ON-ERROR`, `DSPLY` (ook met
+  antwoord), `EVAL(H)` en ingebouwde functies als `%TRIM`, `%SUBST`, `%CHAR`,
+  `%DEC`, `%EDITC`, `%SCAN`, `%EOF` en `%FOUND`. Rekenen met vaste decimalen
+  kapt af zoals RPG dat doet; een te klein veld geeft RNX0103. Fouten bij het
+  compileren staan als RNF-meldingen in de compileerlijst.
 - **SQL**: `STRSQL` en `RUNSQL` met SELECT (joins, GROUP BY/HAVING, subquery's,
   CASE, ORDER BY, FETCH FIRST), INSERT, UPDATE, DELETE, CREATE TABLE (ook
-  `AS (SELECT …) WITH DATA`), DROP en CREATE SCHEMA, met DB2-achtige meldingen.
+  `AS (SELECT …) WITH DATA`, `PRIMARY KEY` wordt de sleutel van het bestand),
+  DROP en CREATE SCHEMA, met DB2-achtige meldingen.
 - **Demobibliotheek** `DEMO` met tabellen (`KLANTEN`, `ARTIKELEN`, `ORDERS`) en
   CL-voorbeelden: `HALLO`, `RAAD` (raad het getal), `TELLER` en `KLANTRPT` (SQL
-  vanuit CL).
+  vanuit CL), en RPG-voorbeelden in `QRPGLESRC`: `HALLORPG`, `KLANTLST`
+  (lijst naar de spool), `VOORRAAD` (CHAIN/UPDATE met invoer) en `ORDERTOT`
+  (procedure).
 - De **schijf** (bibliotheken, broncode, programma's, gebruikers, berichten,
   spool) wordt in `localStorage` bewaard en kan geëxporteerd en geïmporteerd worden.
 
@@ -130,6 +143,7 @@ KLAUS_BIN=/pad/naar/6502_functional_test.bin npm test
 | `js/as400/screen.js` | AS/400: het 5250-schermmodel (24×80, velden, kleuren) |
 | `js/as400/cl.js`, `js/as400/clpgm.js` | CL ontleden, expressies, compiler en interpreter |
 | `js/as400/sql.js` | SQL-engine |
+| `js/as400/rpg.js` | free-form RPG IV: parser, controle en interpreter |
 | `js/as400/db.js`, `js/as400/system.js` | schijfinhoud, demogegevens, bibliotheeklijst, jobs, spool |
 | `js/as400/commands.js` | de CL-opdrachten en hun parameters |
 | `js/as400/panels.js`, `js/as400/work.js`, `js/as400/seu.js` | schermen: menu's, prompter, WRK-lijsten, SQL, SEU |

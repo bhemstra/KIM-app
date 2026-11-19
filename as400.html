@@ -4,13 +4,13 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>AS/400 Simulatie</title>
-  <meta name="description" content="Een nagebootste IBM AS/400 in de browser: 5250-groenscherm, menu's, CL-commando's en -programma's, PDM en SEU, interactieve SQL, spoolbestanden en WRKACTJOB.">
+  <meta name="description" content="Een nagebootste IBM AS/400 in de browser: 5250-groenscherm, menu's, CL-commando's en -programma's, free-form RPG IV, PDM en SEU, interactieve SQL, spoolbestanden en WRKACTJOB.">
   <link rel="stylesheet" href="css/style.css">
 </head>
 <body class="as400-page">
   <header class="top">
     <h1>AS/400 <span>simulatie</span></h1>
-    <p class="sub">SIM400 &middot; 5250-terminal &middot; CL, PDM, SEU en SQL &middot; geen IBM-code, alles nagebootst</p>
+    <p class="sub">SIM400 &middot; 5250-terminal &middot; CL, RPG, PDM, SEU en SQL &middot; geen IBM-code, alles nagebootst</p>
     <nav class="machines" aria-label="Kies een computer">
       <a href="index.html">KIM-1</a>
       <a href="junior.html">Junior Computer</a>
@@ -65,9 +65,10 @@
         <h3>Wat zit erin</h3>
         <ul>
           <li><b>Menu's</b>: MAIN, USER, SYSTEM, DATA, PROGRAM en PDM, met keuzenummers en een opdrachtregel.</li>
-          <li><b>58 systeemopdrachten</b> met de prompter (F4), onder meer <code>WRKACTJOB</code>, <code>WRKSYSSTS</code>, <code>WRKSPLF</code>, <code>DSPMSG</code>/<code>SNDMSG</code>, <code>CRTLIB</code>, <code>WRKOBJ</code>, <code>DSPPFM</code>, <code>DSPFFD</code>, <code>CPYF</code>, <code>RUNQRY</code>, <code>SBMJOB</code>, <code>CRTUSRPRF</code> en <code>PWRDWNSYS</code>. <code>WRKCMD</code> toont ze allemaal.</li>
+          <li><b>59 systeemopdrachten</b> met de prompter (F4), onder meer <code>WRKACTJOB</code>, <code>WRKSYSSTS</code>, <code>WRKSPLF</code>, <code>DSPMSG</code>/<code>SNDMSG</code>, <code>CRTLIB</code>, <code>WRKOBJ</code>, <code>DSPPFM</code>, <code>DSPFFD</code>, <code>CPYF</code>, <code>RUNQRY</code>, <code>SBMJOB</code>, <code>CRTUSRPRF</code> en <code>PWRDWNSYS</code>. <code>WRKCMD</code> toont ze allemaal.</li>
           <li><b>PDM en SEU</b>: broncode bewerken met regelcommando's (<code>I</code>, <code>D</code>, <code>C</code>/<code>M</code> met <code>A</code>/<code>B</code>, <code>R</code>, <code>DD</code>, <code>CC</code>, <code>MM</code>) en F4 om een CL-regel te prompten.</li>
           <li><b>CL-programma's</b>: compileren met optie 14 of <code>CRTCLPGM</code>/<code>CRTBNDCL</code>, met een compileerlijst als spoolbestand. Ondersteund: <code>DCL</code>, <code>CHGVAR</code>, <code>IF</code>/<code>ELSE</code>, <code>DO</code>, <code>DOWHILE</code>, <code>DOUNTIL</code>, <code>DOFOR</code>, <code>SELECT</code>/<code>WHEN</code>, <code>GOTO</code>, <code>MONMSG</code>, <code>SNDPGMMSG</code>, <code>SNDUSRMSG</code> (met antwoord), <code>RTVJOBA</code>, <code>RTVSYSVAL</code>, <code>CALL</code> met parameters, en ingebouwde functies zoals <code>%SST</code> en <code>%TRIM</code>.</li>
+          <li><b>RPG</b>: free-form RPG IV (<code>**FREE</code>) met <code>CRTBNDRPG</code> of optie 14. Variabelen (<code>dcl-s</code>, <code>dcl-c</code>, <code>dcl-ds</code>, arrays met <code>dim</code>), bestanden met sleutel (<code>dcl-f … keyed usage(*update)</code>, <code>READ</code>, <code>CHAIN</code>, <code>SETLL</code>, <code>READE</code>, <code>WRITE</code>, <code>UPDATE</code>, <code>DELETE</code>), printerbestanden naar de spool, procedures (<code>dcl-proc</code>), subroutines, <code>MONITOR</code>, <code>DSPLY</code> (ook met antwoord), <code>QCMDEXC</code> en ingebouwde functies als <code>%TRIM</code>, <code>%SUBST</code>, <code>%CHAR</code>, <code>%DEC</code>, <code>%EDITC</code> en <code>%EOF</code>.</li>
           <li><b>SQL</b> (<code>STRSQL</code> en <code>RUNSQL</code>): SELECT met joins, GROUP BY, subquery's en ORDER BY, plus INSERT, UPDATE, DELETE, CREATE TABLE en DROP. Tabellen schrijf je als <code>DEMO/KLANTEN</code> of <code>DEMO.KLANTEN</code>.</li>
           <li><b>Jobs en spool</b>: je eigen interactieve job, een rij achtergrondjobs, batchjobs via <code>SBMJOB</code> en spoolbestanden die je kunt bekijken.</li>
         </ul>
@@ -84,7 +85,8 @@
           <li>Compileer ook <code>RAAD</code> en start het met <code>CALL RAAD</code>: een raadspelletje in CL dat met <code>SNDUSRMSG</code> om je antwoord vraagt.</li>
           <li>Zet <code>2</code> voor een member om hem in SEU te bewerken. Typ <code>I</code> in een volgnummer om regels in te voegen, zet de cursor op een opdracht en druk F4 om hem te prompten. F3 bewaart.</li>
           <li><code>STRSQL</code> en dan bijvoorbeeld:<br><code>SELECT k.NAAM, SUM(o.AANTAL * a.PRIJS) FROM DEMO/ORDERS o JOIN DEMO/KLANTEN k ON k.KLNR = o.KLNR JOIN DEMO/ARTIKELEN a ON a.ARTNR = o.ARTNR GROUP BY k.NAAM</code></li>
-          <li><code>WRKSPLF</code> toont de compileerlijsten. Met optie 5 bekijk je ze.</li>
+          <li>RPG: <code>WRKMBRPDM DEMO/QRPGLESRC</code>, zet <code>14</code> voor alle vier de members en probeer <code>CALL HALLORPG PARM('Kim')</code>, <code>CALL KLANTLST</code> (lijst in de spool), <code>CALL ORDERTOT</code> (met een procedure) en <code>CALL VOORRAAD</code> (vraagt om invoer en werkt het bestand bij).</li>
+          <li><code>WRKSPLF</code> toont de compileerlijsten en de klantenlijst. Met optie 5 bekijk je ze.</li>
           <li><code>SBMJOB CMD(CALL TELLER PARM(10))</code> draait een programma in batch. Daarna staat er een bericht voor je klaar: zie <code>MW</code> in de statusregel, en <code>DSPMSG</code>.</li>
           <li>Durf je? <code>PWRDWNSYS RESTART(*YES)</code> en bevestig met F16.</li>
         </ol>
@@ -96,6 +98,22 @@
              SNDPGMMSG  MSG('Hallo,' *BCAT &amp;NAAM)
              ENDPGM</pre>
         <p class="hint">Maak het aan met <code>STRSEU DEMO/QCLSRC GROET</code>, compileer met <code>CRTCLPGM GROET</code> en start met <code>CALL GROET PARM('Kim')</code>.</p>
+        <h3>Een eigen RPG-programma</h3>
+        <pre class="mono">**free
+dcl-f KLANTEN keyed;
+dcl-s rood int(10) inz(0);
+
+read KLANTEN;
+dow not %eof(KLANTEN);
+  if SALDO &lt; 0;
+    rood += 1;
+    dsply (%trim(NAAM) + ' staat rood');
+  endif;
+  read KLANTEN;
+enddo;
+dsply (%char(rood) + ' klant(en) met een negatief saldo');
+*inlr = *on;</pre>
+        <p class="hint">Maak het aan met <code>STRSEU DEMO/QRPGLESRC ROOD</code> (het type wordt vanzelf <code>RPGLE</code>), compileer met <code>CRTBNDRPG ROOD</code> en start met <code>CALL ROOD</code>.</p>
       </div>
 
       <div class="tab-body" data-tab="set">

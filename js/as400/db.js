@@ -21,8 +21,8 @@ export function newObject(name, type, attr, text = '', extra = {}) {
 }
 
 // Fysiek bestand met velden (zoals CREATE TABLE of DDS het maakt)
-export function newDataFile(name, fields, text = '', rows = []) {
-  return newObject(name, '*FILE', 'PF', text, { fields, rows, src: false });
+export function newDataFile(name, fields, text = '', rows = [], keys = []) {
+  return newObject(name, '*FILE', 'PF', text, { fields, rows, src: false, keys });
 }
 
 export function newSourceFile(name, text = '') {
@@ -130,6 +130,7 @@ Probeer bijvoorbeeld:
   WRKACTJOB                  actieve jobs bekijken
   WRKMBRPDM DEMO/QCLSRC      broncode bewerken (optie 2) en compileren (14)
   CALL HALLO                 een CL-programma starten (eerst compileren)
+  WRKMBRPDM DEMO/QRPGLESRC   RPG-programma's (free-form RPG IV)
   STRSQL                     interactieve SQL
   RUNQRY *NONE DEMO/KLANTEN  een bestand bekijken
   WRKSPLF                    afdrukken bekijken
@@ -161,7 +162,7 @@ export function factoryState() {
     [10060, 'Kaashandel Gouda BV', 'Gouda', 2999.99],
     [10070, 'Drukkerij Pers & Co', 'Haarlem', 512.4],
     [10080, 'Tuincentrum De Linde', 'Utrecht', 64.0],
-  ]);
+  ], ['KLNR']);
   put('DEMO', klanten);
 
   put('DEMO', newDataFile('ARTIKELEN', [
@@ -175,7 +176,7 @@ export function factoryState() {
     ['A300', 'Diskette 8 inch', 9.75, 150],
     ['A400', 'Twinax-kabel 10 m', 45.0, 6],
     ['A500', 'Terminal 5251', 2495.0, 1],
-  ]));
+  ], ['ARTNR']));
 
   put('DEMO', newDataFile('ORDERS', [
     { name: 'ORDNR', type: 'DECIMAL', len: 7, scale: 0, heading: 'Order' },
@@ -190,7 +191,7 @@ export function factoryState() {
     [1000004, 10050, 'A200', 5, '1994-04-02'],
     [1000005, 10010, 'A300', 20, '1994-04-11'],
     [1000006, 10060, 'A100', 1, '1994-05-01'],
-  ]));
+  ], ['ORDNR']));
 
   const src = put('DEMO', newSourceFile('QCLSRC', 'Broncode van CL-programma\'s'));
   src.members.HALLO = newMember('CLP', 'Hallo, wereld', DEMO_HALLO);
@@ -200,6 +201,8 @@ export function factoryState() {
 
   const txt = put('DEMO', newSourceFile('QTXTSRC', 'Tekstbestanden'));
   txt.members.LEESMIJ = newMember('TXT', 'Lees mij eerst', DEMO_LEESMIJ);
+
+  addRpgDemo(libs.DEMO);
 
   return {
     version: 1,
@@ -230,9 +233,162 @@ export function factoryState() {
       QSTRUPPGM: 'QSTRUP QSYS',
       QIPLDATTIM: '*NONE',
     },
+    rpgDemo: true,
     nextJob: 123456,
     nextSpl: 1,
   };
+}
+
+// ---------- RPG-voorbeelden (free-form RPG IV) ----------
+
+const RPG_HALLO = `
+**free
+// HALLORPG: een eerste programma in free-form RPG IV.
+// Aanroep: CALL HALLORPG of CALL HALLORPG PARM('Kim')
+dcl-pi *n;
+  naam char(20);
+end-pi;
+
+if %parms() = 0 or naam = *blanks;
+  naam = 'wereld';
+endif;
+dsply ('Hallo, ' + %trim(naam) + '!');
+*inlr = *on;
+`;
+
+const RPG_KLANTLST = `
+**free
+// KLANTLST: klantenlijst naar de spool (QSYSPRT) met totaalsaldo
+dcl-f KLANTEN keyed;
+dcl-f QSYSPRT printer(80);
+
+dcl-s regel char(80);
+dcl-s totaal packed(11:2) inz(0);
+dcl-s aantal int(10) inz(0);
+
+regel = 'Klantenlijst van ' + %char(%date());
+write QSYSPRT regel;
+regel = 'Klant  Naam                     Plaats              ' +
+        '        Saldo';
+write QSYSPRT regel;
+
+setll *start KLANTEN;
+read KLANTEN;
+dow not %eof(KLANTEN);
+  regel = %editc(KLNR : 'X') + '  ' + NAAM + PLAATS
+        + %editc(SALDO : 'J');
+  write QSYSPRT regel;
+  totaal += SALDO;
+  aantal += 1;
+  read KLANTEN;
+enddo;
+
+regel = 'Totaal';
+%subst(regel : 51 : 15) = %editc(totaal : 'J');
+write QSYSPRT regel;
+
+dsply (%char(aantal) + ' klanten, totaal saldo '
+      + %char(totaal) + '. Zie WRKSPLF.');
+*inlr = *on;
+`;
+
+const RPG_VOORRAAD = `
+**free
+// VOORRAAD: voorraad van een artikel ophogen (CHAIN en UPDATE)
+dcl-f ARTIKELEN keyed usage(*update);
+
+dcl-s antw char(10);
+dcl-s erbij packed(5:0);
+
+dow *on;
+  dsply 'Artikelnummer (A100 t/m A500, leeg = stoppen)?' '' antw;
+  if antw = *blanks;
+    leave;
+  endif;
+
+  chain (%upper(%trim(antw))) ARTIKELEN;
+  if not %found(ARTIKELEN);
+    dsply ('Artikel ' + %trim(antw) + ' bestaat niet.');
+    iter;
+  endif;
+
+  dsply (%trim(OMSCHR) + ': voorraad ' + %char(VOORRAAD)
+        + '. Hoeveel erbij?') '' antw;
+  monitor;
+    erbij = %dec(antw : 5 : 0);
+  on-error;
+    dsply 'Dat is geen getal.';
+    iter;
+  endmon;
+
+  VOORRAAD += erbij;
+  update ARTIKELEN;
+  dsply ('Nieuwe voorraad van ' + %trim(ARTNR) + ': '
+        + %char(VOORRAAD));
+enddo;
+*inlr = *on;
+`;
+
+const RPG_ORDERTOT = `
+**free
+// ORDERTOT: orderregels met bedrag, berekend in een procedure
+dcl-f ORDERS keyed;
+dcl-f ARTIKELEN keyed;
+dcl-f KLANTEN keyed;
+
+dcl-s totaal packed(11:2) inz(0);
+dcl-s bedrag packed(9:2);
+
+read ORDERS;
+dow not %eof(ORDERS);
+  bedrag = regelBedrag(ARTNR : AANTAL);
+  chain KLNR KLANTEN;
+  dsply (%char(ORDNR) + ' ' + %trim(NAAM) + ': ' + %char(bedrag));
+  totaal += bedrag;
+  read ORDERS;
+enddo;
+dsply ('Totaal van alle orders: ' + %char(totaal));
+*inlr = *on;
+
+dcl-proc regelBedrag;
+  dcl-pi *n packed(9:2);
+    artikel char(6) const;
+    stuks packed(5:0) const;
+  end-pi;
+
+  chain artikel ARTIKELEN;
+  if not %found(ARTIKELEN);
+    return 0;
+  endif;
+  return PRIJS * stuks;
+end-proc;
+`;
+
+export function addRpgDemo(lib) {
+  const k = objKey('QRPGLESRC', '*FILE');
+  if (lib.objs[k]) return;
+  const f = newSourceFile('QRPGLESRC', 'Broncode van RPG-programma\'s');
+  f.rcdlen = 112;
+  f.members.HALLORPG = newMember('RPGLE', 'Hallo in RPG', RPG_HALLO);
+  f.members.KLANTLST = newMember('RPGLE', 'Klantenlijst naar de spool', RPG_KLANTLST);
+  f.members.VOORRAAD = newMember('RPGLE', 'Voorraad ophogen (CHAIN/UPDATE)', RPG_VOORRAAD);
+  f.members.ORDERTOT = newMember('RPGLE', 'Orderbedragen met een procedure', RPG_ORDERTOT);
+  lib.objs[k] = f;
+}
+
+// Schijven uit een eerdere versie aanvullen (sleutels, RPG-voorbeelden)
+export function upgradeState(st) {
+  const demo = st.libs?.DEMO;
+  if (demo) {
+    const keys = { KLANTEN: ['KLNR'], ARTIKELEN: ['ARTNR'], ORDERS: ['ORDNR'] };
+    for (const [n, k] of Object.entries(keys)) {
+      const o = demo.objs[objKey(n, '*FILE')];
+      if (o && !o.keys && o.fields?.some((f) => f.name === k[0])) o.keys = k;
+    }
+    if (!st.rpgDemo) addRpgDemo(demo);
+  }
+  st.rpgDemo = true;
+  return st;
 }
 
 export const SYSVAL_TEXT = {
