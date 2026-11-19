@@ -5,6 +5,8 @@ import { disassemble, REG_NAMES } from './pdp11-disasm.js';
 import { parseAbsoluteLoader, toAbsoluteLoader } from './pdp11-files.js';
 import { textToCard, ROWS, charToHollerith } from './pdp11-cards.js';
 import { SAMPLES_PDP11, SAMPLE_CARDS } from './pdp11-samples.js';
+import { compilePascal } from './pascal.js';
+import { PASCAL_SAMPLES } from './pascal-samples.js';
 
 const $ = (id) => document.getElementById(id);
 const m = new PDP11();
@@ -203,7 +205,7 @@ function initTerminal() {
 
 // ---------- Tabs ----------
 
-let activeTab = 'asm';
+let activeTab = 'pas';
 document.querySelectorAll('.tabs button').forEach((b) => {
   b.addEventListener('click', () => {
     activeTab = b.dataset.tab;
@@ -296,6 +298,79 @@ function initAssembler() {
     if (!r) return;
     if (r.start === null) { setMsg($('asm-msg'), 'Geen startadres: zet het achter .END, bijvoorbeeld .END START', 'err'); return; }
     startAt(r.start);
+  });
+}
+
+// ---------- Pascal ----------
+
+function compileAndLoad() {
+  const msg = $('pas-msg');
+  let asm;
+  try {
+    asm = compilePascal($('pas-source').value);
+  } catch (err) {
+    setMsg(msg, err.message, 'err');
+    if (err.line) selectLine($('pas-source'), err.line);
+    return null;
+  }
+  $('pas-out').textContent = asm;
+  try {
+    const r = assemble(asm);
+    loadSegments(r.segments);
+    const total = r.segments.reduce((n, s) => n + s.bytes.length, 0);
+    setMsg(msg, `Gecompileerd: ${total} bytes PDP-11-code.`, 'ok');
+    return r;
+  } catch (err) {
+    // Hoort niet te gebeuren: een fout in de compiler zelf
+    setMsg(msg, `Interne fout in de compiler: ${err.message}`, 'err');
+    $('pas-out-box').open = true;
+    return null;
+  }
+}
+
+function initPascal() {
+  const sel = $('pas-sample');
+  PASCAL_SAMPLES.forEach((s, i) => {
+    const o = document.createElement('option');
+    o.value = i;
+    o.textContent = s.name;
+    sel.appendChild(o);
+  });
+  const showDesc = () => { $('pas-desc').textContent = PASCAL_SAMPLES[sel.value].description; };
+  sel.addEventListener('change', showDesc);
+  sel.value = store.get('pas-sample', 0);
+  if (!PASCAL_SAMPLES[sel.value]) sel.value = 0;
+  showDesc();
+  $('pas-source').value = store.get('pas-source', PASCAL_SAMPLES[sel.value].source);
+  $('btn-pas-sample').addEventListener('click', () => {
+    $('pas-source').value = PASCAL_SAMPLES[sel.value].source;
+    store.set('pas-source', $('pas-source').value);
+    store.set('pas-sample', Number(sel.value));
+    setMsg($('pas-msg'), '');
+  });
+  let saveTimer;
+  $('pas-source').addEventListener('input', () => {
+    clearTimeout(saveTimer);
+    saveTimer = setTimeout(() => store.set('pas-source', $('pas-source').value), 400);
+  });
+  $('pas-source').addEventListener('keydown', (e) => {
+    if (e.key === 'Tab') {
+      e.preventDefault();
+      const ta = e.target;
+      ta.setRangeText('  ', ta.selectionStart, ta.selectionEnd, 'end');
+    }
+  });
+  $('btn-pas-compile').addEventListener('click', compileAndLoad);
+  $('btn-pas-run').addEventListener('click', () => {
+    const r = compileAndLoad();
+    if (!r) return;
+    startAt(r.start);
+    if (!matchMedia('(pointer: coarse)').matches) $('terminal').focus({ preventScroll: true });
+  });
+  $('btn-pas-to-asm').addEventListener('click', () => {
+    $('source').value = $('pas-out').textContent;
+    store.set('source', $('source').value);
+    document.querySelector('.tabs button[data-tab="asm"]').click();
   });
 }
 
@@ -623,6 +698,7 @@ setSR(0);
 initTerminal();
 ttyWrite('@');
 initAssembler();
+initPascal();
 initDebugger();
 initCards();
 initFiles();

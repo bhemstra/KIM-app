@@ -244,7 +244,7 @@ input.hex4 {
   text-transform: uppercase;
 }
 
-textarea#source {
+textarea#source, textarea.code {
   width: 100%;
   height: 420px;
   background: #121417;
@@ -331,7 +331,7 @@ kbd {
 
 /* iOS zoomt in op invoervelden kleiner dan 16px */
 @media (pointer: coarse) {
-  input.hex4, select, textarea#source { font-size: 16px; }
+  input.hex4, select, textarea#source, textarea.code { font-size: 16px; }
 }
 
 /* ---------- Keuze tussen de machines ---------- */
@@ -570,3 +570,5 @@ textarea.cards-text {
 }
 .pdp11-page .dbg-grid { grid-template-columns: 1fr; }
 .pdp11-page pre.mono { white-space: pre; }
+
+.pdp11-page textarea.code { tab-size: 2; height: 400px; }

@@ -77,7 +77,13 @@ python3 -m http.server 8000
 - **MACRO-11-assembler** (octaal, lokale labels, alle adresseermodi, `.ASCIZ` enz.)
   met listing, een disassembler, debugger met breekpunt, en laden/opslaan in het
   DEC *absolute loader*-formaat.
-- Voorbeelden: hallo wereld, looplicht, typmachine met interrupts, klok, priemgetallen
+- **Pascal-compiler** om mee te leren (ongeveer Pascal-S van Wirth): `integer`,
+  `boolean`, `char`, arrays, procedures en functies met recursie, `write`/`read`.
+  Hij vertaalt naar leesbare MACRO-11-code met de Pascal-regels als commentaar, en
+  controleert tijdens het draaien op overloop, deling door nul, array-grenzen en een
+  volle stack. Voorbeelden: tafels, raad het getal, zeef van Eratosthenes, faculteit,
+  torens van Hanoi en sorteren.
+- Voorbeelden in assembler: hallo wereld, looplicht, typmachine met interrupts, klok, priemgetallen
   met `MUL`/`DIV`, systeemaanroepen met `TRAP` en het lezen van ponskaarten.
 
 De Junior bestaat ook als desktop-app voor Windows en macOS: zie
@@ -122,3 +128,4 @@ KLAUS_BIN=/pad/naar/6502_functional_test.bin npm test
 | `js/pdp11-asm.js`, `js/pdp11-disasm.js` | MACRO-11-assembler, instructietabel en disassembler |
 | `js/pdp11-files.js` | absolute-loaderformaat |
 | `js/pdp11-app.js`, `js/pdp11-samples.js` | gebruikersinterface en voorbeelden van `pdp11.html` |
+| `js/pascal.js`, `js/pascal-samples.js` | Pascal-compiler (naar MACRO-11) en voorbeelden |

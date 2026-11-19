@@ -77,7 +77,8 @@
       <!-- Panelen -->
       <section class="panels">
         <nav class="tabs" role="tablist">
-          <button role="tab" data-tab="asm" class="active">Assembler</button>
+          <button role="tab" data-tab="pas" class="active">Pascal</button>
+          <button role="tab" data-tab="asm">Assembler</button>
           <button role="tab" data-tab="dbg">Debugger</button>
           <button role="tab" data-tab="cards">Ponskaarten</button>
           <button role="tab" data-tab="io">Bestanden</button>
@@ -85,7 +86,27 @@
           <button role="tab" data-tab="help">Uitleg</button>
         </nav>
 
-        <div class="tab-body active" data-tab="asm">
+        <div class="tab-body active" data-tab="pas">
+          <div class="row">
+            <select id="pas-sample"></select>
+            <button id="btn-pas-sample">Voorbeeld openen</button>
+          </div>
+          <p class="hint" id="pas-desc"></p>
+          <textarea id="pas-source" class="code" spellcheck="false" wrap="off" aria-label="Pascal-programma"></textarea>
+          <div class="row">
+            <button id="btn-pas-run" class="primary">Compileren &amp; starten</button>
+            <button id="btn-pas-compile">Alleen compileren</button>
+            <span id="pas-msg" class="msg"></span>
+          </div>
+          <details class="listing" id="pas-out-box">
+            <summary>Gegenereerde PDP-11-code (MACRO-11)</summary>
+            <div class="row"><button id="btn-pas-to-asm" class="small">Openen in de assembler</button></div>
+            <pre id="pas-out" class="mono"></pre>
+          </details>
+          <p class="hint">Een eenvoudig Pascal om mee te leren: <code>integer</code>, <code>boolean</code>, <code>char</code>, arrays, procedures en functies (ook recursief). De compiler vertaalt naar PDP-11-assembler; zie <em>Uitleg</em>.</p>
+        </div>
+
+        <div class="tab-body" data-tab="asm">
           <div class="row">
             <select id="sample"></select>
             <button id="btn-load-sample">Voorbeeld openen</button>
@@ -207,7 +228,8 @@
 
           <h3>Snel beginnen</h3>
           <ol>
-            <li>Kies in de <em>Assembler</em> een voorbeeld en klik <b>Laden &amp; starten</b>.</li>
+            <li>Kies in de tab <em>Pascal</em> een voorbeeld en klik <b>Compileren &amp; starten</b>. De uitvoer verschijnt in de terminal.</li>
+            <li>Of kies in de <em>Assembler</em> een voorbeeld en klik <b>Laden &amp; starten</b>.</li>
             <li>Of tik in de terminal (als de processor stilstaat) <code>1000G</code> om op adres 1000 te starten.</li>
             <li>Bij een <code>HALT</code> toont de terminal het adres en een <code>@</code>: je bent weer in de console-ODT.</li>
           </ol>
@@ -290,6 +312,20 @@
           <h3>Ponskaarten</h3>
           <p>Een kaart heeft 80 kolommen en 12 rijen (12, 11, 0, 1 … 9). Een cijfer is één gaatje in zijn eigen rij; een letter is een combinatie van een <em>zone</em> (12, 11 of 0) en een cijferrij: A = 12-1, J = 11-1, S = 0-2. Leestekens krijgen ook een gaatje in rij 8. De kaartlezer leest 1200 kaarten per minuut; per kolom heeft het programma ongeveer een halve milliseconde. Leest het een kolom niet op tijd, dan zet de lezer een <em>timing error</em> (bits 11 en 15).</p>
           <p>Kaartlezers hoorden vooral bij grote rekencentra. Een PDP-11 kreeg meestal een Teletype met ponsband; de CR11 was een uitbreiding voor wie programma's of gegevens op kaarten had.</p>
+
+          <h3>Pascal</h3>
+          <p>Pascal werd in 1970 door Niklaus Wirth ontworpen om mee te leren programmeren, en was op de PDP-11 populair op scholen en universiteiten. Deze compiler kent een eenvoudige versie, ongeveer het <em>Pascal-S</em> van Wirth:</p>
+          <ul>
+            <li><code>program</code>, <code>const</code>, <code>type</code>, <code>var</code>, <code>procedure</code> en <code>function</code> (met waarde- en <code>var</code>-parameters, ook recursief; niet in elkaar genest).</li>
+            <li>Typen <code>integer</code> (−32768 t/m 32767), <code>boolean</code>, <code>char</code> en <code>array [1..10] of ...</code>. Een array geef je alleen als <code>var</code>-parameter door, met een eigen type.</li>
+            <li><code>:=</code>, <code>if then else</code>, <code>while do</code>, <code>repeat until</code>, <code>for to/downto do</code>, <code>begin end</code>.</li>
+            <li><code>+ - * div mod</code>, <code>and or not</code>, <code>= &lt;&gt; &lt; &lt;= &gt; &gt;=</code>; en <code>ord</code>, <code>chr</code>, <code>odd</code>, <code>abs</code>, <code>sqr</code>, <code>succ</code>, <code>pred</code>.</li>
+            <li><code>write</code> en <code>writeln</code> met teksten, getallen, tekens en booleans; <code>write(x:5)</code> drukt af in 5 posities. <code>read</code> en <code>readln</code> lezen een getal of een teken van de terminal.</li>
+            <li>Commentaar tussen <code>{ }</code> of <code>(* *)</code>.</li>
+          </ul>
+          <p>Niet aanwezig: <code>real</code>, <code>string</code>, records, pointers, sets, bestanden en <code>case</code>.</p>
+          <p>Tijdens het draaien controleert het programma op <b>overloop</b> (een uitkomst groter dan 32767), <b>deling door nul</b>, een <b>index buiten de array</b> en een <b>volle stack</b> (oneindige recursie). Dan stopt het met een melding en het regelnummer.</p>
+          <p><b>Hoe de vertaling werkt.</b> Open <em>Gegenereerde PDP-11-code</em>: boven elk stukje staat de Pascal-regel. Een expressie wordt uitgerekend in <code>R0</code>; tussenresultaten gaan op de stack (<code>MOV R0,-(SP)</code>). Een procedure krijgt een <em>frame</em> met <code>R5</code> als framepointer: parameters staan boven R5 (<code>4(R5)</code>, <code>6(R5)</code> …), lokale variabelen eronder (<code>-2(R5)</code> …). Een <code>var</code>-parameter is het adres van de variabele (<code>@4(R5)</code>). Globale variabelen heten <code>V.NAAM</code>, procedures <code>P.NAAM</code>. In- en uitvoer gaan via een kleine runtime-bibliotheek (<code>R.WINT</code>, <code>R.RINT</code> …) die achter het programma wordt gezet; een fout tijdens het draaien is een <code>EMT</code>-trap.</p>
 
           <h3>De assembler (MACRO-11)</h3>
           <ul>
